@@ -1,0 +1,57 @@
+<div class="app-layout">
+  <!-- Barra Lateral (Sidebar) de Navegación -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">⚡</div>
+      <h2>Gym<span class="text-neon">Flow</span></h2>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📊</span>
+        <span class="nav-text">Panel de Control</span>
+      </a>
+      <a routerLink="/members" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span class="nav-text">Miembros</span>
+      </a>
+      <a routerLink="/plans" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏷️</span>
+        <span class="nav-text">Planes</span>
+      </a>
+      <a routerLink="/payments" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">💳</span>
+        <span class="nav-text">Facturación</span>
+      </a>
+      <a routerLink="/attendance" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏃</span>
+        <span class="nav-text">Check-In</span>
+      </a>
+      <a routerLink="/exercises" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">🏋️</span>
+        <span class="nav-text">Ejercicios</span>
+      </a>
+      <a routerLink="/wods" routerLinkActive="active" class="nav-item">
+        <span class="nav-icon">📅</span>
+        <span class="nav-text">WODs</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="user-profile">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+          <span class="user-name">Administrador</span>
+          <span class="user-role">Soporte Recepción</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Contenedor Principal (Contenido Dinámico) -->
+  <main class="main-content">
+    <div class="content-wrapper">
+      <router-outlet></router-outlet>
+    </div>
+  </main>
+</div>
