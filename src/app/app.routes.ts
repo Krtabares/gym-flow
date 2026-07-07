@@ -7,6 +7,7 @@ import { AttendanceComponent } from './components/attendance';
 import { ExercisesComponent } from './components/exercises';
 import { WodsComponent } from './components/wods';
 import { SettingsComponent } from './components/settings';
+import { TimerComponent } from './components/timer';
 
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
@@ -16,8 +17,10 @@ export const routes: Routes = [
   { path: 'attendance', component: AttendanceComponent },
   { path: 'exercises', component: ExercisesComponent },
   { path: 'wods', component: WodsComponent },
+  { path: 'timer', component: TimerComponent },
   { path: 'settings', component: SettingsComponent },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' }
 ];
+
 
