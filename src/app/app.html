@@ -1,105 +1,124 @@
-<!-- Encabezado superior para pantallas móviles -->
-<header class="mobile-header mobile-only">
-  <div class="mobile-header-brand">
-    <div class="brand-logo">⚡</div>
-    <h2>Gym<span class="text-neon">Flow</span></h2>
-  </div>
-  <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" aria-label="Abrir Menú">
-    ☰
-  </button>
-</header>
-
-<!-- Fondo oscuro y desenfocado al abrir el menú lateral en móvil -->
-<div class="sidebar-backdrop mobile-only" *ngIf="isMobileMenuOpen()" (click)="closeMobileMenu()"></div>
-
-<div class="app-layout">
-  <!-- Barra Lateral (Sidebar) de Navegación con clase dinámica para Drawer en móvil -->
-  <aside class="sidebar" [class.open]="isMobileMenuOpen()">
-    <div class="sidebar-brand">
+<ng-container *ngIf="currentUser() as user; else loginTemp">
+  <!-- Encabezado superior para pantallas móviles -->
+  <header class="mobile-header mobile-only">
+    <div class="mobile-header-brand">
       <div class="brand-logo">⚡</div>
       <h2>Gym<span class="text-neon">Flow</span></h2>
-      <!-- Botón para cerrar el menú lateral en móvil -->
-      <button class="close-sidebar-btn mobile-only" (click)="closeMobileMenu()">✕</button>
     </div>
+    <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" aria-label="Abrir Menú">
+      ☰
+    </button>
+  </header>
 
-    <nav class="sidebar-nav">
-      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">📊</span>
-        <span class="nav-text">Panel de Control</span>
-      </a>
-      <a routerLink="/members" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">👥</span>
-        <span class="nav-text">Miembros</span>
-      </a>
-      <a routerLink="/plans" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">🏷️</span>
-        <span class="nav-text">Planes</span>
-      </a>
-      <a routerLink="/payments" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">💳</span>
-        <span class="nav-text">Facturación</span>
-      </a>
-      <a routerLink="/attendance" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">🏃</span>
-        <span class="nav-text">Check-In</span>
-      </a>
-      <a routerLink="/exercises" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">🏋️</span>
-        <span class="nav-text">Ejercicios</span>
-      </a>
-      <a routerLink="/wods" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">📅</span>
-        <span class="nav-text">WODs</span>
-      </a>
-      <a routerLink="/timer" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">⏱️</span>
-        <span class="nav-text">Cronómetro</span>
-      </a>
-      <a routerLink="/settings" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
-        <span class="nav-icon">⚙️</span>
-        <span class="nav-text">Configuración</span>
-      </a>
-    </nav>
+  <!-- Fondo oscuro y desenfocado al abrir el menú lateral en móvil -->
+  <div class="sidebar-backdrop mobile-only" *ngIf="isMobileMenuOpen()" (click)="closeMobileMenu()"></div>
 
-    <div class="sidebar-footer">
-      <div class="user-profile">
-        <div class="user-avatar">A</div>
-        <div class="user-info">
-          <span class="user-name">Administrador</span>
-          <span class="user-role">Soporte Recepción</span>
+  <div class="app-layout">
+    <!-- Barra Lateral (Sidebar) de Navegación con clase dinámica para Drawer en móvil -->
+    <aside class="sidebar" [class.open]="isMobileMenuOpen()">
+      <div class="sidebar-brand">
+        <div class="brand-logo">⚡</div>
+        <h2>Gym<span class="text-neon">Flow</span></h2>
+        <!-- Botón para cerrar el menú lateral en móvil -->
+        <button class="close-sidebar-btn mobile-only" (click)="closeMobileMenu()">✕</button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">📊</span>
+          <span class="nav-text">Panel de Control</span>
+        </a>
+        <a routerLink="/members" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">👥</span>
+          <span class="nav-text">Miembros</span>
+        </a>
+        <a routerLink="/plans" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">🏷️</span>
+          <span class="nav-text">Planes</span>
+        </a>
+        <a routerLink="/payments" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">💳</span>
+          <span class="nav-text">Facturación</span>
+        </a>
+        <a routerLink="/attendance" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">🏃</span>
+          <span class="nav-text">Check-In</span>
+        </a>
+        <a routerLink="/exercises" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">🏋️</span>
+          <span class="nav-text">Ejercicios</span>
+        </a>
+        <a routerLink="/wods" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">📅</span>
+          <span class="nav-text">WODs</span>
+        </a>
+        <a routerLink="/timer" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">⏱️</span>
+          <span class="nav-text">Cronómetro</span>
+        </a>
+        <a routerLink="/users" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">🔑</span>
+          <span class="nav-text">Usuarios</span>
+        </a>
+        <a routerLink="/scores" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">🏆</span>
+          <span class="nav-text">Marcas y PRs</span>
+        </a>
+        <a routerLink="/settings" routerLinkActive="active" class="nav-item" (click)="closeMobileMenu()">
+          <span class="nav-icon">⚙️</span>
+          <span class="nav-text">Configuración</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-container">
+          <div class="user-profile">
+            <div class="user-avatar">{{ user.nombre.charAt(0).toUpperCase() }}</div>
+            <div class="user-info">
+              <span class="user-name">{{ user.nombre }}</span>
+              <span class="user-role">{{ getRolLabel(user.rol) }}</span>
+            </div>
+          </div>
+          <button class="logout-btn" (click)="logout()" title="Cerrar Sesión">
+            🚪
+          </button>
         </div>
       </div>
-    </div>
-  </aside>
+    </aside>
 
-  <!-- Contenedor Principal (Contenido Dinámico) -->
-  <main class="main-content">
-    <div class="content-wrapper">
-      <router-outlet></router-outlet>
-    </div>
-  </main>
-</div>
+    <!-- Contenedor Principal (Contenido Dinámico) -->
+    <main class="main-content">
+      <div class="content-wrapper">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
 
-<!-- Barra de Navegación Inferior para móviles -->
-<nav class="bottom-nav mobile-only">
-  <a routerLink="/dashboard" routerLinkActive="active" class="bottom-nav-item">
-    <span class="bottom-nav-icon">📊</span>
-    <span class="bottom-nav-text">Panel</span>
-  </a>
-  <a routerLink="/members" routerLinkActive="active" class="bottom-nav-item">
-    <span class="bottom-nav-icon">👥</span>
-    <span class="bottom-nav-text">Atletas</span>
-  </a>
-  <a routerLink="/attendance" routerLinkActive="active" class="bottom-nav-item">
-    <span class="bottom-nav-icon">🏃</span>
-    <span class="bottom-nav-text">Check-In</span>
-  </a>
-  <a routerLink="/wods" routerLinkActive="active" class="bottom-nav-item">
-    <span class="bottom-nav-icon">📅</span>
-    <span class="bottom-nav-text">WODs</span>
-  </a>
-  <button type="button" class="bottom-nav-item btn-menu-trigger" (click)="toggleMobileMenu()">
-    <span class="bottom-nav-icon">☰</span>
-    <span class="bottom-nav-text">Menú</span>
-  </button>
-</nav>
+  <!-- Barra de Navegación Inferior para móviles -->
+  <nav class="bottom-nav mobile-only">
+    <a routerLink="/dashboard" routerLinkActive="active" class="bottom-nav-item">
+      <span class="bottom-nav-icon">📊</span>
+      <span class="bottom-nav-text">Panel</span>
+    </a>
+    <a routerLink="/members" routerLinkActive="active" class="bottom-nav-item">
+      <span class="bottom-nav-icon">👥</span>
+      <span class="bottom-nav-text">Atletas</span>
+    </a>
+    <a routerLink="/attendance" routerLinkActive="active" class="bottom-nav-item">
+      <span class="bottom-nav-icon">🏃</span>
+      <span class="bottom-nav-text">Check-In</span>
+    </a>
+    <a routerLink="/wods" routerLinkActive="active" class="bottom-nav-item">
+      <span class="bottom-nav-icon">📅</span>
+      <span class="bottom-nav-text">WODs</span>
+    </a>
+    <button type="button" class="bottom-nav-item btn-menu-trigger" (click)="toggleMobileMenu()">
+      <span class="bottom-nav-icon">☰</span>
+      <span class="bottom-nav-text">Menú</span>
+    </button>
+  </nav>
+</ng-container>
+
+<ng-template #loginTemp>
+  <app-login></app-login>
+</ng-template>

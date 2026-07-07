@@ -106,14 +106,22 @@
 
 /* Sidebar Footer */
 .sidebar-footer {
-  padding: 24px;
+  padding: 20px 24px;
   border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.user-profile-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .user-profile {
   display: flex;
   align-items: center;
   gap: 12px;
+  overflow: hidden;
 }
 
 .user-avatar {
@@ -126,22 +134,51 @@
   justify-content: center;
   font-weight: bold;
   color: #fff;
+  flex-shrink: 0;
 }
 
 .user-info {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .user-name {
   font-size: 0.88rem;
   font-weight: 600;
   color: #fff;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .user-role {
   font-size: 0.72rem;
   color: #71717a;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.logout-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: #71717a;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.logout-btn:hover {
+  background: rgba(244, 63, 94, 0.1);
+  transform: scale(1.05);
 }
 
 /* Main Content */

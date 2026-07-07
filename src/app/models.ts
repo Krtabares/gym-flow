@@ -138,3 +138,28 @@ export interface Wod {
   created_at?: string;
 }
 
+export interface Usuario {
+  id: string;
+  nombre: string;
+  email: string;
+  rol: 'admin' | 'coach' | 'recepcion';
+  telefono?: string;
+  contrasena?: string;
+  activo: boolean;
+  created_at?: string;
+}
+
+export interface MarcaMiembro {
+  id: string;
+  miembro_id: string;
+  ejercicio_id: string;
+  valor: number;
+  unidad: string;
+  fecha: string;
+  notas?: string;
+  created_at?: string;
+  miembro?: Miembro;
+  ejercicio?: Ejercicio;
+}
+
+

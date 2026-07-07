@@ -52,12 +52,25 @@ CREATE TABLE IF NOT EXISTS anamnesis_plantilla (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 6. Tabla de Usuarios (Administradores / Personal)
+CREATE TABLE IF NOT EXISTS usuarios (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    rol TEXT DEFAULT 'coach' CHECK (rol IN ('admin', 'coach', 'recepcion')) NOT NULL,
+    telefono TEXT,
+    contrasena TEXT DEFAULT '123456' NOT NULL,
+    activo BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Habilitar Row Level Security (RLS) en todas las tablas
 ALTER TABLE planes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE miembros ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE asistencia ENABLE ROW LEVEL SECURITY;
 ALTER TABLE anamnesis_plantilla ENABLE ROW LEVEL SECURITY;
+ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 
 -- Crear políticas permisivas para desarrollo rápido (permite leer/escribir públicamente)
 CREATE POLICY "Permitir todo acceso público a planes" ON planes FOR ALL USING (true) WITH CHECK (true);
@@ -65,6 +78,7 @@ CREATE POLICY "Permitir todo acceso público a miembros" ON miembros FOR ALL USI
 CREATE POLICY "Permitir todo acceso público a pagos" ON pagos FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir todo acceso público a asistencia" ON asistencia FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir todo acceso público a plantilla" ON anamnesis_plantilla FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo acceso público a usuarios" ON usuarios FOR ALL USING (true) WITH CHECK (true);
 
 -- Insertar la plantilla de preguntas por defecto si no existe
 INSERT INTO anamnesis_plantilla (id, preguntas)

@@ -1,9 +1,9 @@
-import { Injectable, NgZone, inject } from '@angular/core';
+import { Injectable, NgZone, inject, signal } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Observable, from, of, throwError } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { Plan, Miembro, Pago, Asistencia, PreguntaAnamnesis, Ejercicio, Wod, WodEjercicio } from '../models';
+import { Plan, Miembro, Pago, Asistencia, PreguntaAnamnesis, Ejercicio, Wod, WodEjercicio, Usuario, MarcaMiembro } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +12,48 @@ export class SupabaseService {
   private supabase: SupabaseClient | null = null;
   public isMockMode = true;
   private zone = inject(NgZone);
+
+  private currentUserSignal = signal<Usuario | null>(this.loadCurrentUserFromStorage());
+  public currentUser = this.currentUserSignal.asReadonly();
+
+  private loadCurrentUserFromStorage(): Usuario | null {
+    const saved = localStorage.getItem('gf_current_user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  login(email: string, password?: string): Observable<Usuario> {
+    return this.getUsuarios().pipe(
+      switchMap(usuarios => {
+        const found = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
+        if (found) {
+          if (!found.activo) {
+            return throwError(() => new Error('El usuario está inactivo en el sistema.'));
+          }
+          const userPassword = found.contrasena || '123456';
+          if (password && userPassword !== password) {
+            return throwError(() => new Error('La contraseña ingresada es incorrecta.'));
+          }
+          this.currentUserSignal.set(found);
+          localStorage.setItem('gf_current_user', JSON.stringify(found));
+          return of(found);
+        } else {
+          return throwError(() => new Error('El correo electrónico no corresponde a ningún usuario registrado.'));
+        }
+      })
+    );
+  }
+
+  logout(): void {
+    this.currentUserSignal.set(null);
+    localStorage.removeItem('gf_current_user');
+  }
 
   private supabaseQuery<T>(promise: PromiseLike<T>): Observable<T> {
     return new Observable<T>(observer => {
@@ -415,6 +457,47 @@ export class SupabaseService {
         { id: 'we9', wod_id: 'w3', ejercicio_id: 'e16', series: 8, repeticiones: '20s/10s', detalles: 'Remo Concept2 caloría máxima', orden: 1 }
       ];
       localStorage.setItem('gf_wod_ejercicios', JSON.stringify(mockWodEjercicios));
+    }
+
+    if (!localStorage.getItem('gf_usuarios')) {
+      const mockUsuarios: Usuario[] = [
+        { id: 'u_root', nombre: 'Usuario Root', email: 'root@gymflow.com', rol: 'admin', telefono: '555-0000', contrasena: '123456', activo: true, created_at: new Date().toISOString() },
+        { id: 'u1', nombre: 'Administrador GymFlow', email: 'admin@gymflow.com', rol: 'admin', telefono: '555-0100', contrasena: '123456', activo: true, created_at: new Date().toISOString() },
+        { id: 'u2', nombre: 'Coach Entrenador', email: 'coach@gymflow.com', rol: 'coach', telefono: '555-0200', contrasena: '123456', activo: true, created_at: new Date().toISOString() },
+        { id: 'u3', nombre: 'Recepcionista GymFlow', email: 'recepcion@gymflow.com', rol: 'recepcion', telefono: '555-0300', contrasena: '123456', activo: true, created_at: new Date().toISOString() }
+      ];
+      localStorage.setItem('gf_usuarios', JSON.stringify(mockUsuarios));
+    }
+
+    if (!localStorage.getItem('gf_marcas_miembros')) {
+      const mockMarcas: MarcaMiembro[] = [
+        // Carlos Gómez (m1)
+        { id: 'sc1', miembro_id: 'm1', ejercicio_id: 'e33', valor: 140, unidad: 'kg', fecha: this.getDateOffset(-30), notas: 'RP anterior, se sintió pesado' },
+        { id: 'sc2', miembro_id: 'm1', ejercicio_id: 'e33', valor: 145, unidad: 'kg', fecha: this.getDateOffset(-10), notas: 'Nuevo RP! Sentadilla trasera sólida' },
+        { id: 'sc3', miembro_id: 'm1', ejercicio_id: 'e29', valor: 180, unidad: 'kg', fecha: this.getDateOffset(-25), notas: 'Peso muerto RP' },
+        { id: 'sc4', miembro_id: 'm1', ejercicio_id: 'e21', valor: 100, unidad: 'kg', fecha: this.getDateOffset(-5), notas: 'Clean & Jerk split jerk' },
+        { id: 'sc5', miembro_id: 'm1', ejercicio_id: 'e3', valor: 25, unidad: 'reps', fecha: this.getDateOffset(-20), notas: 'Pull-ups unbroken kipping' },
+        { id: 'sc6', miembro_id: 'm1', ejercicio_id: 'e17', valor: 390, unidad: 'segundos', fecha: this.getDateOffset(-15), notas: 'Carrera 1600m PR (6:30)' },
+
+        // Sofía Rodríguez (m2)
+        { id: 'sc7', miembro_id: 'm2', ejercicio_id: 'e33', valor: 95, unidad: 'kg', fecha: this.getDateOffset(-15), notas: 'Back squat PR' },
+        { id: 'sc8', miembro_id: 'm2', ejercicio_id: 'e29', valor: 115, unidad: 'kg', fecha: this.getDateOffset(-8), notas: 'Deadlift PR' },
+        { id: 'sc9', miembro_id: 'm2', ejercicio_id: 'e3', valor: 32, unidad: 'reps', fecha: this.getDateOffset(-12), notas: 'Pull-ups unbroken butterflies' },
+        { id: 'sc10', miembro_id: 'm2', ejercicio_id: 'e5', valor: 12, unidad: 'reps', fecha: this.getDateOffset(-3), notas: 'Bar muscle-ups unbroken' },
+        { id: 'sc11', miembro_id: 'm2', ejercicio_id: 'e17', valor: 375, unidad: 'segundos', fecha: this.getDateOffset(-22), notas: '1600m run PR (6:15)' },
+
+        // Martín Silva (m3)
+        { id: 'sc12', miembro_id: 'm3', ejercicio_id: 'e33', valor: 110, unidad: 'kg', fecha: this.getDateOffset(-30), notas: 'Back squat' },
+        { id: 'sc13', miembro_id: 'm3', ejercicio_id: 'e29', valor: 140, unidad: 'kg', fecha: this.getDateOffset(-20), notas: 'Deadlift' },
+        { id: 'sc14', miembro_id: 'm3', ejercicio_id: 'e3', valor: 15, unidad: 'reps', fecha: this.getDateOffset(-5), notas: 'Strict pull-ups' },
+
+        // Lucía Fernández (m4)
+        { id: 'sc15', miembro_id: 'm4', ejercicio_id: 'e33', valor: 105, unidad: 'kg', fecha: this.getDateOffset(-40), notas: 'RP anterior' },
+        { id: 'sc16', miembro_id: 'm4', ejercicio_id: 'e33', valor: 110, unidad: 'kg', fecha: this.getDateOffset(-5), notas: 'Back squat PR' },
+        { id: 'sc17', miembro_id: 'm4', ejercicio_id: 'e25', valor: 70, unidad: 'kg', fecha: this.getDateOffset(-12), notas: 'Snatch squat' },
+        { id: 'sc18', miembro_id: 'm4', ejercicio_id: 'e21', valor: 85, unidad: 'kg', fecha: this.getDateOffset(-2), notas: 'Clean & Jerk PR' }
+      ];
+      localStorage.setItem('gf_marcas_miembros', JSON.stringify(mockMarcas));
     }
   }
 
@@ -1084,6 +1167,228 @@ export class SupabaseService {
 
     return this.supabaseQuery(
       this.supabase!.from('wods').delete().eq('id', id)
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return true;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  // --- CRUD DE USUARIOS ---
+  getUsuarios(): Observable<Usuario[]> {
+    if (this.isMockMode) {
+      const usuarios = JSON.parse(localStorage.getItem('gf_usuarios') || '[]');
+      return of(usuarios);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('usuarios').select('*').order('nombre', { ascending: true })
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return response.data || [];
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  createUsuario(usuario: Omit<Usuario, 'id' | 'created_at'>): Observable<Usuario> {
+    if (this.isMockMode) {
+      const usuarios = JSON.parse(localStorage.getItem('gf_usuarios') || '[]');
+      const newUsuario: Usuario = {
+        ...usuario,
+        id: 'u_' + Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString()
+      };
+      usuarios.push(newUsuario);
+      localStorage.setItem('gf_usuarios', JSON.stringify(usuarios));
+      return of(newUsuario);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('usuarios').insert([usuario]).select().single()
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return response.data;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  updateUsuario(id: string, usuario: Partial<Usuario>): Observable<Usuario> {
+    if (this.isMockMode) {
+      const usuarios = JSON.parse(localStorage.getItem('gf_usuarios') || '[]');
+      const index = usuarios.findIndex((u: Usuario) => u.id === id);
+      if (index !== -1) {
+        usuarios[index] = { ...usuarios[index], ...usuario };
+        localStorage.setItem('gf_usuarios', JSON.stringify(usuarios));
+        return of(usuarios[index]);
+      }
+      return throwError(() => new Error('Usuario no encontrado'));
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('usuarios').update(usuario).eq('id', id).select().single()
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return response.data;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  deleteUsuario(id: string): Observable<boolean> {
+    if (this.isMockMode) {
+      let usuarios = JSON.parse(localStorage.getItem('gf_usuarios') || '[]');
+      usuarios = usuarios.filter((u: Usuario) => u.id !== id);
+      localStorage.setItem('gf_usuarios', JSON.stringify(usuarios));
+      return of(true);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('usuarios').delete().eq('id', id)
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return true;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  // --- RENDIMIENTO / MARCAS DE MIEMBROS ---
+  getMarcas(miembroId?: string, ejercicioId?: string): Observable<MarcaMiembro[]> {
+    if (this.isMockMode) {
+      let marcas: MarcaMiembro[] = JSON.parse(localStorage.getItem('gf_marcas_miembros') || '[]');
+      const miembros: Miembro[] = JSON.parse(localStorage.getItem('gf_miembros') || '[]');
+      const ejercicios: Ejercicio[] = JSON.parse(localStorage.getItem('gf_ejercicios') || '[]');
+
+      if (miembroId) {
+        marcas = marcas.filter(m => m.miembro_id === miembroId);
+      }
+      if (ejercicioId) {
+        marcas = marcas.filter(m => m.ejercicio_id === ejercicioId);
+      }
+
+      const populated = marcas.map(m => ({
+        ...m,
+        miembro: miembros.find(athlete => athlete.id === m.miembro_id),
+        ejercicio: ejercicios.find(ex => ex.id === m.ejercicio_id)
+      })).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+      return of(populated);
+    }
+
+    let query = this.supabase!.from('marcas_miembros').select('*, miembros(*), ejercicios(*)');
+    if (miembroId) {
+      query = query.eq('miembro_id', miembroId);
+    }
+    if (ejercicioId) {
+      query = query.eq('ejercicio_id', ejercicioId);
+    }
+
+    return this.supabaseQuery(query).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return (response.data || []).map((row: any) => {
+          const { miembros, ejercicios, ...marca } = row;
+          return {
+            ...marca,
+            miembro: miembros || undefined,
+            ejercicio: ejercicios || undefined
+          } as MarcaMiembro;
+        });
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  createMarca(marca: Omit<MarcaMiembro, 'id' | 'created_at'>): Observable<MarcaMiembro> {
+    if (this.isMockMode) {
+      const marcas: MarcaMiembro[] = JSON.parse(localStorage.getItem('gf_marcas_miembros') || '[]');
+      const newMarca: MarcaMiembro = {
+        ...marca,
+        id: 'brand_' + Math.random().toString(36).substr(2, 9),
+        created_at: new Date().toISOString()
+      };
+      marcas.push(newMarca);
+      localStorage.setItem('gf_marcas_miembros', JSON.stringify(marcas));
+
+      // Populate relations for response
+      const miembros: Miembro[] = JSON.parse(localStorage.getItem('gf_miembros') || '[]');
+      const ejercicios: Ejercicio[] = JSON.parse(localStorage.getItem('gf_ejercicios') || '[]');
+      newMarca.miembro = miembros.find(athlete => athlete.id === newMarca.miembro_id);
+      newMarca.ejercicio = ejercicios.find(ex => ex.id === newMarca.ejercicio_id);
+
+      return of(newMarca);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('marcas_miembros').insert([marca]).select('*, miembros(*), ejercicios(*)').single()
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        const row = response.data;
+        const { miembros, ejercicios, ...res } = row;
+        return {
+          ...res,
+          miembro: miembros || undefined,
+          ejercicio: ejercicios || undefined
+        } as MarcaMiembro;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  updateMarca(id: string, marca: Partial<MarcaMiembro>): Observable<MarcaMiembro> {
+    if (this.isMockMode) {
+      const marcas: MarcaMiembro[] = JSON.parse(localStorage.getItem('gf_marcas_miembros') || '[]');
+      const index = marcas.findIndex(m => m.id === id);
+      if (index !== -1) {
+        marcas[index] = { ...marcas[index], ...marca };
+        localStorage.setItem('gf_marcas_miembros', JSON.stringify(marcas));
+
+        const miembros: Miembro[] = JSON.parse(localStorage.getItem('gf_miembros') || '[]');
+        const ejercicios: Ejercicio[] = JSON.parse(localStorage.getItem('gf_ejercicios') || '[]');
+        marcas[index].miembro = miembros.find(athlete => athlete.id === marcas[index].miembro_id);
+        marcas[index].ejercicio = ejercicios.find(ex => ex.id === marcas[index].ejercicio_id);
+
+        return of(marcas[index]);
+      }
+      return throwError(() => new Error('Marca no encontrada'));
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('marcas_miembros').update(marca).eq('id', id).select('*, miembros(*), ejercicios(*)').single()
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        const row = response.data;
+        const { miembros, ejercicios, ...res } = row;
+        return {
+          ...res,
+          miembro: miembros || undefined,
+          ejercicio: ejercicios || undefined
+        } as MarcaMiembro;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  deleteMarca(id: string): Observable<boolean> {
+    if (this.isMockMode) {
+      let marcas = JSON.parse(localStorage.getItem('gf_marcas_miembros') || '[]');
+      marcas = marcas.filter((m: MarcaMiembro) => m.id !== id);
+      localStorage.setItem('gf_marcas_miembros', JSON.stringify(marcas));
+      return of(true);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('marcas_miembros').delete().eq('id', id)
     ).pipe(
       map(response => {
         if (response.error) throw response.error;

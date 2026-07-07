@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../services/supabase.service';
 import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro } from '../models';
@@ -128,6 +129,7 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
                 <td style="text-align: right;">
                   <div class="actions-wrapper">
                     <button class="btn-action border-cyan" [class.active-record]="m.anamnesis" [title]="m.anamnesis ? 'Ficha Médica (Completada)' : 'Registrar Ficha Médica'" (click)="openAnamnesisModal(m)">📋</button>
+                    <button class="btn-action border-cyan" title="Ver Marcas / PRs" (click)="viewMemberScores(m)">🏆</button>
                     <button class="btn-action" title="Editar Miembro" (click)="openEditModal(m)">✏️</button>
                     <button class="btn-action border-green" title="Registrar Pago" *ngIf="m.plan_id" (click)="openPaymentModal(m)">💵</button>
                     <button class="btn-action border-danger" title="Eliminar Miembro" (click)="deleteMember(m.id)">🗑️</button>
@@ -192,6 +194,7 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
               
               <div class="actions-wrapper">
                 <button class="btn-action border-cyan" [class.active-record]="m.anamnesis" [title]="m.anamnesis ? 'Ficha Médica (Completada)' : 'Registrar Ficha Médica'" (click)="openAnamnesisModal(m)">📋</button>
+                <button class="btn-action border-cyan" title="Ver Marcas / PRs" (click)="viewMemberScores(m)">🏆</button>
                 <button class="btn-action" title="Editar Miembro" (click)="openEditModal(m)">✏️</button>
                 <button class="btn-action border-green" title="Registrar Pago" *ngIf="m.plan_id" (click)="openPaymentModal(m)">💵</button>
                 <button class="btn-action border-danger" title="Eliminar Miembro" (click)="deleteMember(m.id)">🗑️</button>
@@ -841,6 +844,7 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
 export class MembersComponent implements OnInit {
   private db = inject(SupabaseService);
   private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
 
   members: Miembro[] = [];
   filteredMembers: Miembro[] = [];
@@ -1156,5 +1160,9 @@ export class MembersComponent implements OnInit {
       this.closeAnamnesisModal();
       this.cdr.markForCheck();
     });
+  }
+
+  viewMemberScores(member: Miembro): void {
+    this.router.navigate(['/scores'], { queryParams: { miembroId: member.id } });
   }
 }
