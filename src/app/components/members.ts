@@ -62,7 +62,8 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
 
       <!-- Listado de Miembros -->
       <div class="glass-card list-card">
-        <div class="table-container" *ngIf="filteredMembers.length > 0; else emptyState">
+        <!-- Vista Desktop: Tabla de Miembros -->
+        <div class="table-container desktop-only" *ngIf="filteredMembers.length > 0; else emptyState">
           <table class="custom-table">
             <thead>
               <tr>
@@ -82,6 +83,8 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
                     <div class="info">
                       <span class="name">{{ m.nombre }}</span>
                       <span class="id-tag">ID: {{ m.id.substring(0, 8) }}</span>
+                      <span class="birth-date" *ngIf="m.fecha_nacimiento">🎂 Cumple: {{ formatDate(m.fecha_nacimiento) }}</span>
+                      <span class="join-date">📅 Ingreso: {{ formatDate(m.fecha_ingreso || m.created_at) }}</span>
                     </div>
                   </div>
                 </td>
@@ -104,8 +107,16 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
                       Vence: {{ formatDate(m.fecha_fin) }}
                     </span>
                     <span class="start-date">Inició: {{ formatDate(m.fecha_inicio) }}</span>
+                    <span class="cobro-date" *ngIf="m.fecha_cobro">
+                      💵 Cobro: {{ formatDate(m.fecha_cobro) }}
+                    </span>
                   </div>
-                  <ng-template #noDates><span class="text-muted">-</span></ng-template>
+                  <ng-template #noDates>
+                    <div class="date-info">
+                      <span class="cobro-date" *ngIf="m.fecha_cobro">💵 Cobro: {{ formatDate(m.fecha_cobro) }}</span>
+                      <span class="text-muted" *ngIf="!m.fecha_cobro">-</span>
+                    </div>
+                  </ng-template>
                 </td>
                 <td>
                   <span class="badge" [class.badge-active]="m.estado === 'activo'"
@@ -126,6 +137,69 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
             </tbody>
           </table>
         </div>
+
+        <!-- Vista Móvil: Tarjetas de Miembros -->
+        <div class="mobile-cards-container mobile-only" *ngIf="filteredMembers.length > 0">
+          <div class="mobile-member-card glass-card" *ngFor="let m of filteredMembers">
+            <div class="card-header-row">
+              <div class="member-profile">
+                <div class="avatar">{{ m.nombre.charAt(0) }}</div>
+                <div class="info">
+                  <span class="name">{{ m.nombre }}</span>
+                  <span class="id-tag">ID: {{ m.id.substring(0, 8) }}</span>
+                </div>
+              </div>
+              <span class="badge" [class.badge-active]="m.estado === 'activo'"
+                                   [class.badge-expired]="m.estado === 'vencido'"
+                                   [class.badge-inactive]="m.estado === 'inactivo'">
+                {{ m.estado }}
+              </span>
+            </div>
+
+            <div class="card-body-row mt-12">
+              <div class="contact-info">
+                <span>📧 {{ m.email || 'Sin correo' }}</span>
+                <span>📞 {{ m.telefono || 'Sin teléfono' }}</span>
+              </div>
+              
+              <div class="plan-details mt-8 flex-between">
+                <div class="plan-info" *ngIf="m.plan; else noMobilePlan">
+                  <span class="plan-name" style="font-weight: 700; color: var(--primary);">{{ m.plan.nombre }}</span>
+                  <span class="plan-price text-muted">\${{ m.plan.precio }}</span>
+                </div>
+                <ng-template #noMobilePlan><span class="text-muted">Sin Plan</span></ng-template>
+                
+                <div class="date-info text-right" *ngIf="m.plan">
+                  <span class="expiry-date font-xs" [class.text-danger]="m.estado === 'vencido'">
+                    Vence: {{ formatDate(m.fecha_fin) }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="dates-meta mt-8 flex-between text-muted font-xs">
+                <span *ngIf="m.fecha_nacimiento">🎂 {{ formatDate(m.fecha_nacimiento) }}</span>
+                <span>📅 Ingreso: {{ formatDate(m.fecha_ingreso || m.created_at) }}</span>
+              </div>
+            </div>
+
+            <div class="card-footer-row mt-12">
+              <div class="cobro-info">
+                <span class="cobro-date font-xs" style="color: var(--accent); font-weight: 600;" *ngIf="m.fecha_cobro">
+                  💵 Cobro: {{ formatDate(m.fecha_cobro) }}
+                </span>
+                <span class="text-muted font-xs" *ngIf="!m.fecha_cobro">-</span>
+              </div>
+              
+              <div class="actions-wrapper">
+                <button class="btn-action border-cyan" [class.active-record]="m.anamnesis" [title]="m.anamnesis ? 'Ficha Médica (Completada)' : 'Registrar Ficha Médica'" (click)="openAnamnesisModal(m)">📋</button>
+                <button class="btn-action" title="Editar Miembro" (click)="openEditModal(m)">✏️</button>
+                <button class="btn-action border-green" title="Registrar Pago" *ngIf="m.plan_id" (click)="openPaymentModal(m)">💵</button>
+                <button class="btn-action border-danger" title="Eliminar Miembro" (click)="deleteMember(m.id)">🗑️</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <ng-template #emptyState>
           <div class="empty-state">
             <span class="empty-icon">🔍</span>
@@ -161,6 +235,17 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
 
             <div class="form-grid">
               <div class="form-group">
+                <label class="form-label">Fecha de Nacimiento</label>
+                <input type="date" class="form-control" name="fecha_nacimiento" [(ngModel)]="memberForm.fecha_nacimiento">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fecha de Ingreso</label>
+                <input type="date" class="form-control" name="fecha_ingreso" [(ngModel)]="memberForm.fecha_ingreso" required>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
                 <label class="form-label">Plan de Suscripción</label>
                 <select class="form-control" name="plan_id" [(ngModel)]="memberForm.plan_id" (change)="onPlanChange()">
                   <option [value]="null">Sin Plan / Inactivo</option>
@@ -174,10 +259,17 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
               </div>
             </div>
 
-            <div class="form-group" *ngIf="memberForm.plan_id">
-              <label class="form-label text-cyan">Fin de Suscripción Estimado</label>
-              <input type="date" class="form-control font-cyan" name="fecha_fin" [ngModel]="memberForm.fecha_fin" disabled>
-              <span class="info-note">Calculado automáticamente según la duración del plan.</span>
+            <div class="form-grid" *ngIf="memberForm.plan_id">
+              <div class="form-group">
+                <label class="form-label text-cyan">Fin de Suscripción Estimado</label>
+                <input type="date" class="form-control font-cyan" name="fecha_fin" [ngModel]="memberForm.fecha_fin" disabled>
+                <span class="info-note">Calculado automáticamente.</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label text-accent">Fecha de Cobro</label>
+                <input type="date" class="form-control" name="fecha_cobro" [(ngModel)]="memberForm.fecha_cobro">
+                <span class="info-note">Próximo cobro/facturación.</span>
+              </div>
             </div>
 
             <div class="form-group">
@@ -408,6 +500,17 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
       font-size: 0.7rem;
       color: #71717a;
     }
+    .birth-date, .join-date {
+      font-size: 0.7rem;
+      color: #a1a1aa;
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .birth-date {
+      color: #f472b6;
+    }
     
     .contact-info {
       display: flex;
@@ -438,6 +541,15 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
     }
     .date-info .expiry-date { font-weight: 600; }
     .date-info .start-date { color: #71717a; font-size: 0.72rem; }
+    .date-info .cobro-date {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-top: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
     
     .text-muted { color: #71717a; font-size: 0.8rem; }
 
@@ -804,7 +916,10 @@ export class MembersComponent implements OnInit {
       plan_id: null,
       fecha_inicio: new Date().toISOString().split('T')[0],
       fecha_fin: '',
-      estado: 'activo' as const
+      estado: 'activo' as const,
+      fecha_nacimiento: '',
+      fecha_ingreso: new Date().toISOString().split('T')[0],
+      fecha_cobro: ''
     };
   }
 
@@ -825,7 +940,10 @@ export class MembersComponent implements OnInit {
       plan_id: member.plan_id,
       fecha_inicio: member.fecha_inicio,
       fecha_fin: member.fecha_fin,
-      estado: member.estado
+      estado: member.estado,
+      fecha_nacimiento: member.fecha_nacimiento || '',
+      fecha_ingreso: member.fecha_ingreso || member.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+      fecha_cobro: member.fecha_cobro || ''
     };
     this.showModal = true;
   }
@@ -837,6 +955,7 @@ export class MembersComponent implements OnInit {
   onPlanChange() {
     if (!this.memberForm.plan_id) {
       this.memberForm.fecha_fin = '';
+      this.memberForm.fecha_cobro = '';
       return;
     }
 
@@ -845,6 +964,11 @@ export class MembersComponent implements OnInit {
       const startDate = new Date(this.memberForm.fecha_inicio);
       startDate.setDate(startDate.getDate() + selectedPlan.duracion_dias);
       this.memberForm.fecha_fin = startDate.toISOString().split('T')[0];
+      
+      // Auto-assign billing date to match plan start date if currently empty
+      if (!this.memberForm.fecha_cobro) {
+        this.memberForm.fecha_cobro = this.memberForm.fecha_inicio;
+      }
     }
   }
 
@@ -858,7 +982,10 @@ export class MembersComponent implements OnInit {
       plan_id: this.memberForm.plan_id,
       fecha_inicio: this.memberForm.fecha_inicio,
       fecha_fin: this.memberForm.fecha_fin || this.memberForm.fecha_inicio,
-      estado: this.memberForm.estado
+      estado: this.memberForm.estado,
+      fecha_nacimiento: this.memberForm.fecha_nacimiento || undefined,
+      fecha_ingreso: this.memberForm.fecha_ingreso || new Date().toISOString().split('T')[0],
+      fecha_cobro: this.memberForm.fecha_cobro || undefined
     };
 
     if (this.isEditMode && this.memberForm.id) {
@@ -912,11 +1039,12 @@ export class MembersComponent implements OnInit {
       endDate.setDate(endDate.getDate() + (this.activePaymentMember!.plan!.duracion_dias || 30));
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      // Update member state to active and renew dates
+      // Update member state to active and renew dates including billing date
       this.db.updateMiembro(this.activePaymentMember!.id, {
         fecha_inicio: todayStr,
         fecha_fin: endDateStr,
-        estado: 'activo'
+        estado: 'activo',
+        fecha_cobro: todayStr
       }).subscribe(() => {
         alert('Pago registrado correctamente. Suscripción renovada con éxito.');
         this.loadData();
@@ -925,9 +1053,9 @@ export class MembersComponent implements OnInit {
     });
   }
 
-  formatDate(dateStr: string): string {
+  formatDate(dateStr: string | null | undefined): string {
     if (!dateStr) return '-';
-    const d = new Date(dateStr + 'T00:00:00'); // Prevent timezone issues
+    const d = new Date(dateStr.split('T')[0] + 'T00:00:00'); // Prevent timezone issues
     return d.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
   }
 

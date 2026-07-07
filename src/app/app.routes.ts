@@ -6,6 +6,7 @@ import { PaymentsComponent } from './components/payments';
 import { AttendanceComponent } from './components/attendance';
 import { ExercisesComponent } from './components/exercises';
 import { WodsComponent } from './components/wods';
+import { SettingsComponent } from './components/settings';
 
 export const routes: Routes = [
   { path: 'dashboard', component: DashboardComponent },
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: 'attendance', component: AttendanceComponent },
   { path: 'exercises', component: ExercisesComponent },
   { path: 'wods', component: WodsComponent },
+  { path: 'settings', component: SettingsComponent },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' }
 ];

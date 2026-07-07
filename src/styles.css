@@ -252,10 +252,113 @@ h1, h2, h3, h4, h5, h6 {
   background: rgba(0, 255, 136, 0.3);
 }
 
+/* Modales Globales Premium - Centrados con Scroll Interno */
+.modal-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  display: flex !important;
+  align-items: center !important; /* Centrado vertical */
+  justify-content: center !important; /* Centrado horizontal */
+  z-index: 1050 !important;
+  overflow: hidden !important; /* Evita scroll en el fondo */
+  box-sizing: border-box !important;
+}
+
+.modal-content {
+  width: 100% !important;
+  max-width: 580px !important;
+  max-height: 85vh !important; /* Altura máxima estricta */
+  overflow-y: auto !important; /* Scroll interno en la tarjeta */
+  box-sizing: border-box !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 30px !important;
+  position: relative !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-glow) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+.modal-content form {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+/* Custom scrollbar para la tarjeta del modal */
+.modal-content::-webkit-scrollbar {
+  width: 6px !important;
+}
+.modal-content::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 3px !important;
+}
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: var(--primary) !important;
+}
+
+/* Encabezado del modal */
+.modal-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 24px !important;
+  width: 100% !important;
+}
+
+.modal-header h3 {
+  font-size: 1.35rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  margin: 0 !important;
+}
+
+/* Botón de cerrar modal premium circular */
+.close-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #71717a !important;
+  font-size: 1.15rem !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  transition: all 0.2s ease-in-out !important;
+  outline: none !important;
+  padding: 0 !important;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+/* Alineación premium de botones de acción en modales */
+.form-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  margin-top: 28px !important;
+  width: 100% !important;
+}
+
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in {
@@ -286,3 +389,199 @@ h1, h2, h3, h4, h5, h6 {
   gap: 12px;
   align-items: center;
 }
+
+/* Clases de utilidad para visibilidad */
+.mobile-only {
+  display: none !important;
+}
+
+.desktop-only {
+  display: block !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only {
+    display: block !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Ajustes globales de tarjetas y títulos para móviles */
+  .glass-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .title-grad {
+    font-size: 1.6rem !important;
+    line-height: 1.25 !important;
+    word-wrap: break-word !important;
+  }
+  .subtitle {
+    font-size: 0.85rem !important;
+  }
+
+  /* Apilamiento de formularios y diseño de modales en móviles */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  
+  /* En móviles, la tarjeta se adapta en tamaño pero hereda el centrado y scroll global */
+  .modal-content {
+    width: 95% !important;
+    max-width: 95% !important;
+    padding: 20px 16px !important;
+    margin: 10px !important;
+  }
+  
+  /* Ajuste fino de controles de formulario para pantallas táctiles */
+  .form-control {
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    height: auto !important;
+  }
+  .form-group {
+    margin-bottom: 16px !important;
+  }
+  .form-label {
+    font-size: 11px !important;
+    margin-bottom: 6px !important;
+  }
+  .form-actions {
+    margin-top: 24px !important;
+    gap: 12px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+  }
+  .form-actions .btn {
+    flex: 1 !important;
+    width: 100% !important;
+  }
+  
+  /* Cabeceras de páginas */
+  .header-section {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+  }
+  .header-section .flex-gap-2 {
+    width: 100% !important;
+    display: flex !important;
+    gap: 8px !important;
+  }
+  .header-section .btn {
+    flex: 1 !important;
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+  
+  /* Filtros y buscador */
+  .filters-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+  .search-box {
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  .status-filters {
+    width: 100% !important;
+    overflow-x: auto !important;
+    padding-bottom: 6px !important;
+    display: flex !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .status-filters .btn {
+    flex: 1 0 auto !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  /* Listados y contenedores */
+  .list-card {
+    padding: 12px !important;
+  }
+
+  /* Diseño de Tarjeta Móvil para Miembros */
+  .mobile-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+  
+  .mobile-member-card {
+    padding: 16px !important;
+    border-radius: var(--radius-md) !important;
+    margin-bottom: 0 !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .mobile-member-card:hover {
+    transform: none !important;
+  }
+  
+  .card-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    padding-bottom: 12px;
+  }
+  
+  .card-body-row {
+    font-size: 0.85rem;
+  }
+  
+  .card-body-row .contact-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #a1a1aa;
+  }
+  
+  .card-body-row .plan-details {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  .card-footer-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+    padding-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  /* Diseño de Tarjeta Móvil para Pagos */
+  .mobile-payment-card {
+    padding: 16px !important;
+    border-radius: var(--radius-md) !important;
+    margin-bottom: 0 !important;
+    transition: all 0.2s ease !important;
+  }
+  
+  .mobile-payment-card:hover {
+    transform: none !important;
+  }
+}
+
+/* Helpers comunes responsivos */
+.font-xs { font-size: 0.75rem; }
+.mt-12 { margin-top: 12px; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.ml-12 { margin-left: 12px; }
+.text-right { text-align: right; }
+

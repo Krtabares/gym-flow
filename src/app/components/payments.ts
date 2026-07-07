@@ -29,7 +29,8 @@ import { Pago } from '../models';
 
       <!-- Tabla de Pagos -->
       <div class="glass-card list-card">
-        <div class="table-container" *ngIf="filteredPayments.length > 0; else emptyState">
+        <!-- Vista Desktop: Tabla de Pagos -->
+        <div class="table-container desktop-only" *ngIf="filteredPayments.length > 0; else emptyState">
           <table class="custom-table">
             <thead>
               <tr>
@@ -73,6 +74,42 @@ import { Pago } from '../models';
             </tbody>
           </table>
         </div>
+
+        <!-- Vista Móvil: Tarjetas de Transacciones -->
+        <div class="mobile-cards-container mobile-only" *ngIf="filteredPayments.length > 0">
+          <div class="mobile-payment-card glass-card" *ngFor="let p of filteredPayments">
+            <div class="card-header-row">
+              <span class="invoice-id font-xs" style="font-family: monospace;">#{{ p.id.substring(0, 8).toUpperCase() }}</span>
+              <div>
+                <span class="badge badge-active" *ngIf="p.estado === 'completado'">Completado</span>
+                <span class="badge badge-expired" *ngIf="p.estado === 'fallido'">Fallido</span>
+              </div>
+            </div>
+
+            <div class="card-body-row mt-12 flex-between">
+              <div class="member-profile">
+                <span class="avatar-sm" style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.05); color: var(--secondary); font-size: 0.75rem; border: 1px solid rgba(255,255,255,0.1); margin-right: 8px;">
+                  {{ p.miembro?.nombre?.charAt(0) }}
+                </span>
+                <span class="name" style="font-weight: 600; color: #fff; font-size: 0.9rem;">
+                  {{ p.miembro?.nombre || 'Miembro Eliminado' }}
+                </span>
+              </div>
+              <span class="payment-amount" style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">
+                \${{ p.monto }}
+              </span>
+            </div>
+
+            <div class="card-footer-row mt-12">
+              <div class="payment-meta font-xs text-muted" style="display: flex; flex-direction: column; gap: 4px;">
+                <span>📅 {{ formatDateTime(p.fecha_pago) }}</span>
+                <span>💳 Método: {{ p.metodo_pago }}</span>
+              </div>
+              <button class="btn btn-secondary btn-sm" (click)="viewReceipt(p)">Ver Recibo</button>
+            </div>
+          </div>
+        </div>
+
         <ng-template #emptyState>
           <div class="empty-state">
             <span class="empty-icon">💸</span>

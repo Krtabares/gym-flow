@@ -152,6 +152,13 @@ import { Miembro, Asistencia } from '../models';
       align-items: start;
     }
     
+    @media (max-width: 768px) {
+      .attendance-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+    }
+    
     .register-panel h3, .history-panel h3 {
       font-size: 1.15rem;
       color: #fff;

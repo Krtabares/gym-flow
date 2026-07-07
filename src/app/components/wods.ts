@@ -896,17 +896,111 @@ import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from 
     }
     .mt-15 { margin-top: 15px; }
 
-    @media (max-width: 600px) {
-      .item-fields-grid {
-        grid-template-columns: 1fr;
-        gap: 8px;
+    @media (max-width: 768px) {
+      .date-scheduler {
+        padding: 16px !important;
+        gap: 16px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
       }
+      .date-controls {
+        width: 100% !important;
+        justify-content: space-between !important;
+      }
+      .date-picker-input {
+        width: 150px !important;
+        height: 40px !important;
+        font-size: 0.9rem !important;
+      }
+      .nav-date-btn {
+        width: 36px !important;
+        height: 36px !important;
+      }
+
+      /* Tira semanal horizontal swipeable en móvil */
       .week-strip {
-        grid-template-columns: repeat(4, 1fr);
-        overflow-x: auto;
+        display: flex !important;
+        grid-template-columns: none !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+        width: 100% !important;
+        padding-bottom: 8px !important;
+        scroll-snap-type: x mandatory !important;
+        -webkit-overflow-scrolling: touch !important;
+        justify-content: flex-start !important;
       }
-      .strip-day-btn:nth-child(n+5) {
-        display: none; /* Hide days to save space on mobile */
+      .strip-day-btn {
+        flex: 0 0 65px !important;
+        scroll-snap-align: start !important;
+        padding: 10px 4px !important;
+      }
+      .strip-day-btn .day-number {
+        font-size: 1.1rem !important;
+      }
+      .strip-day-btn .day-name {
+        font-size: 0.65rem !important;
+      }
+      
+      /* Tarjeta de WOD */
+      .wod-detail-card {
+        padding: 16px !important;
+        gap: 16px !important;
+      }
+      .wod-card-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        padding-bottom: 12px !important;
+      }
+      .wod-title-wrapper h2 {
+        font-size: 1.3rem !important;
+      }
+      .wod-actions {
+        width: 100% !important;
+        display: flex !important;
+        gap: 8px !important;
+      }
+      .wod-actions button {
+        flex: 1 !important;
+      }
+
+      /* Ejercicios del WOD */
+      .exercise-item-row {
+        grid-template-columns: 30px 1fr !important;
+        gap: 8px !important;
+        padding: 12px !important;
+      }
+      .exercise-specs {
+        grid-column: 2 !important;
+        justify-content: flex-start !important;
+        margin-top: 6px !important;
+        gap: 6px !important;
+      }
+      .spec-series, .spec-reps {
+        padding: 4px 8px !important;
+        font-size: 0.8rem !important;
+      }
+      .spec-details {
+        padding: 4px 8px !important;
+        font-size: 0.8rem !important;
+        width: 100% !important;
+      }
+
+      /* Formulario de WOD en modal */
+      .wod-modal {
+        padding: 20px 16px !important;
+      }
+      .item-fields-grid {
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+      }
+      .form-exercise-item {
+        padding: 10px !important;
+      }
+      .form-exercise-item .form-group.mini.wide {
+        grid-column: auto !important;
       }
     }
   `]

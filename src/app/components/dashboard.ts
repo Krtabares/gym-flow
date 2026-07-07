@@ -209,9 +209,15 @@ Chart.register(...registerables);
     .text-cyan { color: var(--accent); }
     .text-danger { color: var(--danger); }
 
-    /* Main Section */
     .main-grid {
       grid-template-columns: 1.5fr 1fr;
+    }
+    
+    @media (max-width: 992px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
     }
     .chart-container h3, .attendance-container h3 {
       font-size: 1.15rem;

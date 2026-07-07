@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS miembros (
     fecha_fin DATE NOT NULL,
     estado TEXT DEFAULT 'activo' CHECK (estado IN ('activo', 'inactivo', 'vencido')) NOT NULL,
     anamnesis JSONB DEFAULT NULL,
+    fecha_nacimiento DATE,
+    fecha_ingreso DATE DEFAULT CURRENT_DATE NOT NULL,
+    fecha_cobro DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

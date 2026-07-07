@@ -111,6 +111,9 @@ export class SupabaseService {
           fecha_inicio: this.getDateOffset(-15),
           fecha_fin: this.getDateOffset(15),
           estado: 'activo',
+          fecha_nacimiento: '1992-05-15',
+          fecha_ingreso: '2025-01-10',
+          fecha_cobro: this.getDateOffset(-15),
           anamnesis: {
             fecha_completado: this.getDateOffset(-14),
             respuestas: [
@@ -132,7 +135,10 @@ export class SupabaseService {
           plan_id: 'p3',
           fecha_inicio: this.getDateOffset(-45),
           fecha_fin: this.getDateOffset(45),
-          estado: 'activo'
+          estado: 'activo',
+          fecha_nacimiento: '1995-10-22',
+          fecha_ingreso: '2025-02-14',
+          fecha_cobro: this.getDateOffset(-45)
         },
         {
           id: 'm3',
@@ -142,7 +148,10 @@ export class SupabaseService {
           plan_id: 'p1',
           fecha_inicio: this.getDateOffset(-2),
           fecha_fin: this.getDateOffset(-1),
-          estado: 'vencido'
+          estado: 'vencido',
+          fecha_nacimiento: '1988-03-05',
+          fecha_ingreso: '2026-06-01',
+          fecha_cobro: this.getDateOffset(-2)
         },
         {
           id: 'm4',
@@ -152,7 +161,10 @@ export class SupabaseService {
           plan_id: 'p4',
           fecha_inicio: this.getDateOffset(-200),
           fecha_fin: this.getDateOffset(165),
-          estado: 'activo'
+          estado: 'activo',
+          fecha_nacimiento: '2000-07-30',
+          fecha_ingreso: '2024-11-20',
+          fecha_cobro: this.getDateOffset(-200)
         },
         {
           id: 'm5',
@@ -162,7 +174,10 @@ export class SupabaseService {
           plan_id: null,
           fecha_inicio: this.getDateOffset(-10),
           fecha_fin: this.getDateOffset(-10),
-          estado: 'inactivo'
+          estado: 'inactivo',
+          fecha_nacimiento: '1990-12-12',
+          fecha_ingreso: '2026-06-15',
+          fecha_cobro: this.getDateOffset(-10)
         }
       ];
       localStorage.setItem('gf_miembros', JSON.stringify(mockMiembros));

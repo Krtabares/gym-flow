@@ -38,6 +38,9 @@ export interface Miembro {
   anamnesis?: AnamnesisMiembro | null;
   created_at?: string;
   plan?: Plan;
+  fecha_nacimiento?: string;
+  fecha_ingreso?: string;
+  fecha_cobro?: string;
 }
 
 export interface Pago {
