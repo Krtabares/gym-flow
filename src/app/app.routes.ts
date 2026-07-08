@@ -1,31 +1,21 @@
 import { Routes } from '@angular/router';
-import { DashboardComponent } from './components/dashboard';
-import { MembersComponent } from './components/members';
-import { PlansComponent } from './components/plans';
-import { PaymentsComponent } from './components/payments';
-import { AttendanceComponent } from './components/attendance';
-import { ExercisesComponent } from './components/exercises';
-import { WodsComponent } from './components/wods';
-import { SettingsComponent } from './components/settings';
-import { TimerComponent } from './components/timer';
-import { UsersComponent } from './components/users';
-import { ScoresComponent } from './components/scores';
 
 export const routes: Routes = [
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'members', component: MembersComponent },
-  { path: 'plans', component: PlansComponent },
-  { path: 'payments', component: PaymentsComponent },
-  { path: 'attendance', component: AttendanceComponent },
-  { path: 'exercises', component: ExercisesComponent },
-  { path: 'wods', component: WodsComponent },
-  { path: 'timer', component: TimerComponent },
-  { path: 'settings', component: SettingsComponent },
-  { path: 'users', component: UsersComponent },
-  { path: 'scores', component: ScoresComponent },
+  { path: 'dashboard', loadComponent: () => import('./components/dashboard').then(m => m.DashboardComponent) },
+  { path: 'members', loadComponent: () => import('./components/members').then(m => m.MembersComponent) },
+  { path: 'plans', loadComponent: () => import('./components/plans').then(m => m.PlansComponent) },
+  { path: 'payments', loadComponent: () => import('./components/payments').then(m => m.PaymentsComponent) },
+  { path: 'attendance', loadComponent: () => import('./components/attendance').then(m => m.AttendanceComponent) },
+  { path: 'exercises', loadComponent: () => import('./components/exercises').then(m => m.ExercisesComponent) },
+  { path: 'wods', loadComponent: () => import('./components/wods').then(m => m.WodsComponent) },
+  { path: 'timer', loadComponent: () => import('./components/timer').then(m => m.TimerComponent) },
+  { path: 'settings', loadComponent: () => import('./components/settings').then(m => m.SettingsComponent) },
+  { path: 'users', loadComponent: () => import('./components/users').then(m => m.UsersComponent) },
+  { path: 'scores', loadComponent: () => import('./components/scores').then(m => m.ScoresComponent) },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'dashboard' }
 ];
+
 
 
 

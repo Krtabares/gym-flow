@@ -727,13 +727,13 @@ export class SupabaseService {
     );
   }
 
-  createPago(pago: Omit<Pago, 'id' | 'created_at' | 'fecha_pago'>): Observable<Pago> {
+  createPago(pago: Omit<Pago, 'id' | 'created_at'> & { fecha_pago?: string }): Observable<Pago> {
     if (this.isMockMode) {
       const pagos = JSON.parse(localStorage.getItem('gf_pagos') || '[]');
       const newPago: Pago = {
         ...pago,
         id: 'pay_' + Math.random().toString(36).substr(2, 9),
-        fecha_pago: new Date().toISOString(),
+        fecha_pago: pago.fecha_pago || new Date().toISOString(),
         created_at: new Date().toISOString()
       };
       pagos.push(newPago);

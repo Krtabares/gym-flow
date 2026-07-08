@@ -313,6 +313,11 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
 
           <form (submit)="recordPayment()">
             <div class="form-group">
+              <label class="form-label">Fecha de Pago</label>
+              <input type="date" class="form-control" name="fecha_pago" [(ngModel)]="paymentForm.fecha_pago" required>
+            </div>
+
+            <div class="form-group">
               <label class="form-label">Método de Pago</label>
               <select class="form-control" name="metodo_pago" [(ngModel)]="paymentForm.metodo_pago">
                 <option value="Efectivo">Efectivo</option>
@@ -863,7 +868,8 @@ export class MembersComponent implements OnInit {
   showPaymentModal = false;
   activePaymentMember: Miembro | null = null;
   paymentForm = {
-    metodo_pago: 'Efectivo'
+    metodo_pago: 'Efectivo',
+    fecha_pago: ''
   };
 
   // Anamnesis logic variables
@@ -1016,7 +1022,10 @@ export class MembersComponent implements OnInit {
   // Quick Payment logic
   openPaymentModal(member: Miembro) {
     this.activePaymentMember = member;
-    this.paymentForm = { metodo_pago: 'Efectivo' };
+    this.paymentForm = { 
+      metodo_pago: 'Efectivo',
+      fecha_pago: new Date().toISOString().split('T')[0]
+    };
     this.showPaymentModal = true;
   }
 
@@ -1028,27 +1037,31 @@ export class MembersComponent implements OnInit {
   recordPayment() {
     if (!this.activePaymentMember || !this.activePaymentMember.plan) return;
 
+    const selectedDateStr = this.paymentForm.fecha_pago || new Date().toISOString().split('T')[0];
+    const paymentDateTime = new Date(selectedDateStr + 'T12:00:00').toISOString();
+
     // Create a payment record
     const pagoRecord = {
       miembro_id: this.activePaymentMember.id,
       monto: this.activePaymentMember.plan.precio,
       metodo_pago: this.paymentForm.metodo_pago,
+      fecha_pago: paymentDateTime,
       estado: 'completado'
     };
 
     this.db.createPago(pagoRecord).subscribe(() => {
-      // Renew membership dates starting today
-      const todayStr = new Date().toISOString().split('T')[0];
-      const endDate = new Date();
+      // Renew membership dates starting from the selected payment date
+      const startDateStr = selectedDateStr;
+      const endDate = new Date(selectedDateStr + 'T12:00:00');
       endDate.setDate(endDate.getDate() + (this.activePaymentMember!.plan!.duracion_dias || 30));
       const endDateStr = endDate.toISOString().split('T')[0];
 
       // Update member state to active and renew dates including billing date
       this.db.updateMiembro(this.activePaymentMember!.id, {
-        fecha_inicio: todayStr,
+        fecha_inicio: startDateStr,
         fecha_fin: endDateStr,
         estado: 'activo',
-        fecha_cobro: todayStr
+        fecha_cobro: startDateStr
       }).subscribe(() => {
         alert('Pago registrado correctamente. Suscripción renovada con éxito.');
         this.loadData();
