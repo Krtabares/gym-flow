@@ -262,6 +262,9 @@ import { Pago } from '../models';
       z-index: 1000;
     }
     .modal-content.receipt-box {
+      --modal-pad-top: 24px;
+      --modal-pad-bottom: 24px;
+      --modal-pad-side: 24px;
       width: 100%;
       max-width: 420px;
       padding: 24px;

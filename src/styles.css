@@ -36,6 +36,11 @@
 
   /* Layout */
   --sidebar-width: 280px;
+
+  /* Modal Paddings */
+  --modal-pad-top: 30px;
+  --modal-pad-bottom: 30px;
+  --modal-pad-side: 30px;
 }
 
 * {
@@ -277,7 +282,7 @@ h1, h2, h3, h4, h5, h6 {
   overflow-y: auto !important; /* Scroll interno en la tarjeta */
   box-sizing: border-box !important;
   border-radius: var(--radius-lg) !important;
-  padding: 30px !important;
+  padding: var(--modal-pad-top) var(--modal-pad-side) var(--modal-pad-bottom) !important;
   position: relative !important;
   background: var(--bg-card) !important;
   border: 1px solid var(--border-glow) !important;
@@ -309,11 +314,24 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Encabezado del modal */
 .modal-header {
+  position: sticky !important;
+  top: calc(-1 * var(--modal-pad-top)) !important;
+  margin-top: calc(-1 * var(--modal-pad-top)) !important;
+  margin-left: calc(-1 * var(--modal-pad-side)) !important;
+  margin-right: calc(-1 * var(--modal-pad-side)) !important;
+  padding-top: var(--modal-pad-top) !important;
+  padding-bottom: 16px !important;
+  padding-left: var(--modal-pad-side) !important;
+  padding-right: var(--modal-pad-side) !important;
+  background: rgba(18, 18, 24, 0.96) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  z-index: 10 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  margin-bottom: 24px !important;
-  width: 100% !important;
+  width: calc(100% + 2 * var(--modal-pad-side)) !important;
 }
 
 .modal-header h3 {
@@ -347,12 +365,26 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Alineación premium de botones de acción en modales */
-.form-actions {
+.form-actions, .modal-footer {
+  position: sticky !important;
+  bottom: calc(-1 * var(--modal-pad-bottom)) !important;
+  margin-bottom: calc(-1 * var(--modal-pad-bottom)) !important;
+  margin-left: calc(-1 * var(--modal-pad-side)) !important;
+  margin-right: calc(-1 * var(--modal-pad-side)) !important;
+  padding-bottom: var(--modal-pad-bottom) !important;
+  padding-top: 20px !important;
+  padding-left: var(--modal-pad-side) !important;
+  padding-right: var(--modal-pad-side) !important;
+  background: rgba(18, 18, 24, 0.96) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  z-index: 10 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-top: 28px !important;
   display: flex !important;
   justify-content: flex-end !important;
   gap: 12px !important;
-  margin-top: 28px !important;
-  width: 100% !important;
+  width: calc(100% + 2 * var(--modal-pad-side)) !important;
 }
 
 /* Animations */
@@ -430,9 +462,12 @@ h1, h2, h3, h4, h5, h6 {
   
   /* En móviles, la tarjeta se adapta en tamaño pero hereda el centrado y scroll global */
   .modal-content {
+    --modal-pad-top: 20px;
+    --modal-pad-bottom: 20px;
+    --modal-pad-side: 16px;
     width: 95% !important;
     max-width: 95% !important;
-    padding: 20px 16px !important;
+    padding: var(--modal-pad-top) var(--modal-pad-side) var(--modal-pad-bottom) !important;
     margin: 10px !important;
   }
   

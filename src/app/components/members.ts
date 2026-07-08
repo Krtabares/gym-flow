@@ -128,6 +128,7 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
                 </td>
                 <td style="text-align: right;">
                   <div class="actions-wrapper">
+                    <button class="btn-action border-cyan" title="Ver Perfil Centralizado" (click)="viewMemberProfile(m)">👤</button>
                     <button class="btn-action border-cyan" [class.active-record]="m.anamnesis" [title]="m.anamnesis ? 'Ficha Médica (Completada)' : 'Registrar Ficha Médica'" (click)="openAnamnesisModal(m)">📋</button>
                     <button class="btn-action border-cyan" title="Ver Marcas / PRs" (click)="viewMemberScores(m)">🏆</button>
                     <button class="btn-action" title="Editar Miembro" (click)="openEditModal(m)">✏️</button>
@@ -193,6 +194,7 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
               </div>
               
               <div class="actions-wrapper">
+                <button class="btn-action border-cyan" title="Ver Perfil Centralizado" (click)="viewMemberProfile(m)">👤</button>
                 <button class="btn-action border-cyan" [class.active-record]="m.anamnesis" [title]="m.anamnesis ? 'Ficha Médica (Completada)' : 'Registrar Ficha Médica'" (click)="openAnamnesisModal(m)">📋</button>
                 <button class="btn-action border-cyan" title="Ver Marcas / PRs" (click)="viewMemberScores(m)">🏆</button>
                 <button class="btn-action" title="Editar Miembro" (click)="openEditModal(m)">✏️</button>
@@ -1177,5 +1179,9 @@ export class MembersComponent implements OnInit {
 
   viewMemberScores(member: Miembro): void {
     this.router.navigate(['/scores'], { queryParams: { miembroId: member.id } });
+  }
+
+  viewMemberProfile(member: Miembro): void {
+    this.router.navigate(['/members/profile', member.id]);
   }
 }

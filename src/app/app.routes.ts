@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   { path: 'dashboard', loadComponent: () => import('./components/dashboard').then(m => m.DashboardComponent) },
   { path: 'members', loadComponent: () => import('./components/members').then(m => m.MembersComponent) },
+  { path: 'members/profile/:id', loadComponent: () => import('./components/member-profile').then(m => m.MemberProfileComponent) },
   { path: 'plans', loadComponent: () => import('./components/plans').then(m => m.PlansComponent) },
   { path: 'payments', loadComponent: () => import('./components/payments').then(m => m.PaymentsComponent) },
   { path: 'attendance', loadComponent: () => import('./components/attendance').then(m => m.AttendanceComponent) },

@@ -626,6 +626,33 @@ export class SupabaseService {
     );
   }
 
+  getMiembro(id: string): Observable<Miembro> {
+    if (this.isMockMode) {
+      const miembros = JSON.parse(localStorage.getItem('gf_miembros') || '[]');
+      const planes = JSON.parse(localStorage.getItem('gf_planes') || '[]');
+      const m = miembros.find((member: Miembro) => member.id === id);
+      if (!m) return throwError(() => new Error('Miembro no encontrado'));
+      return of({
+        ...m,
+        plan: planes.find((p: Plan) => p.id === m.plan_id) || undefined
+      });
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('miembros').select('*, planes(*)').eq('id', id).single()
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        const { planes, ...miembro } = response.data;
+        return {
+          ...miembro,
+          plan: planes || undefined
+        };
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
   createMiembro(miembro: Omit<Miembro, 'id' | 'created_at'>): Observable<Miembro> {
     if (this.isMockMode) {
       const miembros = JSON.parse(localStorage.getItem('gf_miembros') || '[]');

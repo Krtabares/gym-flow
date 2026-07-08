@@ -686,6 +686,9 @@ import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from 
 
     /* Modal / Form styles */
     .wod-modal {
+      --modal-pad-top: 32px;
+      --modal-pad-bottom: 32px;
+      --modal-pad-side: 32px;
       max-width: 700px;
       width: 95%;
       max-height: 90vh;
@@ -884,6 +887,9 @@ import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from 
       background: rgba(0, 0, 0, 0.85);
     }
     .quick-exercise-modal {
+      --modal-pad-top: 24px;
+      --modal-pad-bottom: 24px;
+      --modal-pad-side: 24px;
       max-width: 420px;
       width: 90%;
       padding: 24px;
