@@ -162,4 +162,10 @@ export interface MarcaMiembro {
   ejercicio?: Ejercicio;
 }
 
+export interface Configuracion {
+  clave: string;
+  valor: string;
+  updated_at?: string;
+}
+
 

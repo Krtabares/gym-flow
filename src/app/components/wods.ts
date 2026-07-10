@@ -1,8 +1,10 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { SupabaseService } from '../services/supabase.service';
 import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from '../models';
+import { WodParserService } from '../services/wod-parser.service';
 
 @Component({
   selector: 'app-wods',
@@ -147,7 +149,153 @@ import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from 
             <button class="close-btn" (click)="closeModal()">✕</button>
           </div>
 
-          <form (submit)="$event.preventDefault(); saveWod()">
+          <!-- BOTÓN TOGGLE DE PANEL IA (Sólo en modo creación) -->
+          <div class="ai-toggle-container" *ngIf="!isEditMode">
+            <button type="button" class="btn btn-secondary btn-ai-toggle" [class.active]="showAiPanel" (click)="toggleAiPanel()">
+              ✨ {{ showAiPanel ? 'Ocultar Creador Rápido con IA' : 'Rellenar con IA (Texto Plano)' }}
+            </button>
+          </div>
+
+          <!-- PANEL CREADOR RÁPIDO CON IA -->
+          <div class="glass-card ai-fast-card animate-fade-in" *ngIf="showAiPanel && !isEditMode">
+            <div class="ai-card-header">
+              <span class="ai-sparkle">🤖</span>
+              <div>
+                <h4>Asistente Inteligente de WODs</h4>
+                <p class="ai-subtitle">Pega tu entrenamiento en texto libre. Extraeremos ejercicios, repeticiones, tipo de WOD y notas.</p>
+              </div>
+            </div>
+
+            <div class="form-group mt-10">
+              <textarea 
+                class="form-control text-area ai-textarea" 
+                rows="4" 
+                [(ngModel)]="aiInputText" 
+                placeholder="Ejemplo:&#10;AMRAP 15 min&#10;15 Burpees&#10;50 Saltos dobles&#10;10 Dominadas"
+              ></textarea>
+            </div>
+
+            <div class="flex-between ai-actions">
+              <span class="ai-provider-badge">
+                Motor: <strong>{{ getAiProviderLabel() }}</strong>
+              </span>
+              <button type="button" class="btn btn-primary btn-sm" (click)="processTextWithAi()" [disabled]="isAiLoading || !aiInputText.trim()">
+                <span>{{ isAiLoading ? 'Analizando...' : 'Procesar con IA' }}</span>
+              </button>
+            </div>
+
+            <!-- Banner de Feedback -->
+            <div class="ai-feedback-banner mt-10" *ngIf="aiFeedbackMessage" [ngClass]="'banner-' + aiFeedbackType">
+              {{ aiFeedbackMessage }}
+            </div>
+          </div>
+
+          <!-- VISTA PREVIA DE BLOQUES DETECTADOS CON IA -->
+          <div class="parsed-blocks-preview animate-fade-in" *ngIf="parsedWodBlocks.length > 0 && !isEditMode">
+            <h4 class="preview-title">📋 Bloques Detectados (Revisa y edita antes de guardar)</h4>
+            
+            <div class="parsed-block-card glass-card" *ngFor="let bloque of parsedWodBlocks; let bIdx = index">
+              <div class="block-card-header flex-between">
+                <h5>Bloque {{ bIdx + 1 }}</h5>
+                <button type="button" class="btn-remove-block" (click)="removeParsedBlock(bIdx)" title="Descartar Bloque">✕ Quitar</button>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Título del Bloque</label>
+                  <input type="text" class="form-control" name="block_titulo_{{bIdx}}" [(ngModel)]="bloque.titulo" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Tipo de WOD</label>
+                  <select class="form-control" name="block_tipo_{{bIdx}}" [(ngModel)]="bloque.tipo" required>
+                    <option *ngFor="let t of wodTypes" [value]="t">{{ t }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Instrucciones / Calentamiento</label>
+                <textarea class="form-control text-area block-textarea" name="block_desc_{{bIdx}}" rows="2" [(ngModel)]="bloque.descripcion" placeholder="Notas, calentamiento o escala de este bloque..."></textarea>
+              </div>
+
+              <div class="block-exercises-preview">
+                <div class="flex-between align-center mb-10">
+                  <h6 style="margin: 0;">Ejercicios Mapeados ({{ bloque.ejercicios.length }})</h6>
+                  <button type="button" class="btn-add-ex-inline" (click)="addPlaceholderExercise(bloque)">
+                    ➕ Añadir Ejercicio
+                  </button>
+                </div>
+                <div class="exercise-preview-list" *ngIf="bloque.ejercicios.length > 0; else noExPreview">
+                  <div class="ex-preview-item animate-fade-in" *ngFor="let item of bloque.ejercicios; let eIdx = index">
+                    <div class="ex-preview-row">
+                      <div class="flex-gap-2 align-center">
+                        <span class="ex-preview-number">{{ eIdx + 1 }}</span>
+                        <select 
+                          class="form-control select-control ex-selector-dropdown" 
+                          [class.unmatched]="!item.ejercicio_id"
+                          name="ex_select_{{bIdx}}_{{eIdx}}" 
+                          [(ngModel)]="item.ejercicio_id"
+                        >
+                          <option value="" disabled *ngIf="!item.ejercicio_id">⚠️ No coincide: "{{ item.matchedEjercicioName }}"</option>
+                          <option *ngFor="let ex of catalogEjercicios" [value]="ex.id">{{ ex.nombre }}</option>
+                        </select>
+                        <button 
+                          type="button" 
+                          class="btn-create-ex-inline" 
+                          [class.highlight]="!item.ejercicio_id"
+                          (click)="openQuickCreateForParsedBlock(bloque, eIdx)" 
+                          [title]="!item.ejercicio_id ? 'Crear este ejercicio en el catálogo' : 'Crear nuevo ejercicio en catálogo'"
+                        >
+                          {{ !item.ejercicio_id ? '➕ Registrar' : '➕ Nuevo' }}
+                        </button>
+                      </div>
+
+                      <div class="ex-preview-specs">
+                        <input 
+                          type="number" 
+                          class="form-control form-control-sm ex-spec-input" 
+                          placeholder="Series" 
+                          name="ex_series_{{bIdx}}_{{eIdx}}" 
+                          [(ngModel)]="item.series" 
+                          style="width: 70px;"
+                          min="1"
+                        >
+                        <input 
+                          type="text" 
+                          class="form-control form-control-sm ex-spec-input" 
+                          placeholder="Reps" 
+                          name="ex_reps_{{bIdx}}_{{eIdx}}" 
+                          [(ngModel)]="item.repeticiones" 
+                          style="width: 80px;"
+                        >
+                        <input 
+                          type="text" 
+                          class="form-control form-control-sm ex-spec-input" 
+                          placeholder="Detalles" 
+                          name="ex_detalles_{{bIdx}}_{{eIdx}}" 
+                          [(ngModel)]="item.detalles" 
+                          style="width: 140px;"
+                        >
+                        <button type="button" class="btn-remove-ex-tag" (click)="removeExerciseFromParsedBlock(bloque, eIdx)" title="Quitar Ejercicio">✕</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #noExPreview>
+                  <div class="no-exercises-alert-form">No se detectaron exercises específicos en este bloque.</div>
+                </ng-template>
+              </div>
+            </div>
+
+            <div class="flex-between form-actions preview-actions">
+              <button type="button" class="btn btn-secondary" (click)="discardParsedBlocks()">Volver al Formulario</button>
+              <button type="button" class="btn btn-primary btn-save-all" (click)="saveAllParsedBlocks()" [disabled]="isAiLoading || parsedWodBlocks.length === 0">
+                <span>Guardar todos los bloques ({{ parsedWodBlocks.length }})</span>
+              </button>
+            </div>
+          </div>
+
+          <form *ngIf="parsedWodBlocks.length === 0 || isEditMode" (submit)="$event.preventDefault(); saveWod()">
             <div class="form-grid">
               <div class="form-group">
                 <label class="form-label">Título del WOD</label>
@@ -886,6 +1034,264 @@ import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from 
       z-index: 3000;
       background: rgba(0, 0, 0, 0.85);
     }
+
+    /* AI Panel styles */
+    .ai-toggle-container {
+      margin-top: 10px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .btn-ai-toggle {
+      font-size: 0.82rem;
+      padding: 8px 16px;
+      background: rgba(0, 255, 136, 0.04);
+      border: 1px solid rgba(0, 255, 136, 0.15);
+      color: var(--primary);
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .btn-ai-toggle:hover, .btn-ai-toggle.active {
+      background: rgba(0, 255, 136, 0.1);
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.15);
+    }
+    .ai-fast-card {
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.01) !important;
+      border: 1px dashed rgba(255, 255, 255, 0.1) !important;
+      margin-bottom: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ai-card-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .ai-sparkle {
+      font-size: 1.5rem;
+    }
+    .ai-fast-card h4 {
+      margin: 0 0 4px 0;
+      font-size: 0.95rem;
+      color: #fff;
+      font-weight: 700;
+    }
+    .ai-subtitle {
+      margin: 0;
+      font-size: 0.78rem;
+      color: #71717a;
+      line-height: 1.4;
+    }
+    .ai-textarea {
+      background: rgba(0, 0, 0, 0.35) !important;
+      font-size: 0.88rem;
+      font-family: inherit;
+      border-color: rgba(255, 255, 255, 0.06);
+    }
+    .ai-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .ai-provider-badge {
+      font-size: 0.78rem;
+      color: #a1a1aa;
+    }
+    .ai-provider-badge strong {
+      color: var(--primary);
+    }
+    .ai-feedback-banner {
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      line-height: 1.4;
+    }
+    .banner-success {
+      background: rgba(0, 255, 136, 0.08);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      color: #a3ffd6;
+    }
+    .banner-warning {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      color: #ffe4b3;
+    }
+    .banner-error {
+      background: rgba(244, 63, 94, 0.08);
+      border: 1px solid rgba(244, 63, 94, 0.2);
+      color: #ffd1d8;
+    }
+
+    /* Multi-block preview styles */
+    .parsed-blocks-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-top: 10px;
+      margin-bottom: 20px;
+    }
+    .preview-title {
+      color: var(--primary);
+      font-weight: 700;
+      margin: 0;
+    }
+    .parsed-block-card {
+      padding: 20px;
+      border: 1px solid var(--border-glow);
+      background: rgba(255, 255, 255, 0.02) !important;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .block-card-header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 8px;
+    }
+    .block-card-header h5 {
+      margin: 0;
+      color: #fff;
+      font-weight: 800;
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .btn-remove-block {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    .btn-remove-block:hover {
+      text-decoration: underline;
+    }
+    .block-textarea {
+      background: rgba(0, 0, 0, 0.25) !important;
+      font-size: 0.85rem;
+    }
+    .block-exercises-preview h6 {
+      margin: 0 0 10px 0;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      color: #71717a;
+      letter-spacing: 0.05em;
+    }
+    .exercise-preview-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ex-preview-item {
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+    }
+    .ex-preview-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .ex-preview-number {
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 0.9rem;
+    }
+    .ex-selector-dropdown {
+      height: 34px !important;
+      padding: 4px 30px 4px 10px !important;
+      font-size: 0.82rem !important;
+      width: 220px;
+      background-color: rgba(0, 0, 0, 0.4) !important;
+      border-color: rgba(255, 255, 255, 0.1) !important;
+      cursor: pointer;
+    }
+    .ex-preview-specs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ex-spec-input {
+      height: 32px !important;
+      font-size: 0.8rem !important;
+      background: rgba(0, 0, 0, 0.3) !important;
+      border-color: rgba(255, 255, 255, 0.06) !important;
+    }
+    .btn-remove-ex-tag {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: bold;
+      padding: 4px;
+      transition: transform 0.15s;
+    }
+    .btn-remove-ex-tag:hover {
+      transform: scale(1.2);
+    }
+    .preview-actions {
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 16px;
+    }
+    .btn-save-all {
+      box-shadow: 0 0 16px rgba(0, 255, 136, 0.25);
+    }
+    .btn-add-ex-inline {
+      background: transparent;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 700;
+      transition: all 0.2s;
+    }
+    .btn-add-ex-inline:hover {
+      text-decoration: underline;
+      color: #fff;
+    }
+    .btn-create-ex-inline {
+      background: rgba(0, 255, 136, 0.05);
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      color: var(--primary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      margin-left: 4px;
+    }
+    .btn-create-ex-inline:hover {
+      background: rgba(0, 255, 136, 0.15);
+      border-color: var(--primary);
+    }
+    .ex-selector-dropdown.unmatched {
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      background-color: rgba(245, 158, 11, 0.08) !important;
+      color: #ffe4b3 !important;
+    }
+    .btn-create-ex-inline.highlight {
+      background: rgba(245, 158, 11, 0.15) !important;
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      color: #ffe4b3 !important;
+      box-shadow: 0 0 10px rgba(245, 158, 11, 0.15);
+    }
+    .btn-create-ex-inline.highlight:hover {
+      background: rgba(245, 158, 11, 0.3) !important;
+      border-color: #ffe4b3 !important;
+    }
     .quick-exercise-modal {
       --modal-pad-top: 24px;
       --modal-pad-bottom: 24px;
@@ -1014,6 +1420,7 @@ import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from 
 export class WodsComponent implements OnInit {
   private db = inject(SupabaseService);
   private cdr = inject(ChangeDetectorRef);
+  private parser = inject(WodParserService);
 
   selectedDate: string = '';
   wods: Wod[] = [];
@@ -1031,6 +1438,16 @@ export class WodsComponent implements OnInit {
   wodForm: Omit<Wod, 'id' | 'wod_ejercicios'> & { id?: string } = this.getDefaultWodForm();
   wodFormEjercicios: Array<Omit<WodEjercicio, 'id' | 'wod_id'> & { id?: string; wod_id?: string }> = [];
 
+  // AI Creator Panel States
+  showAiPanel = false;
+  aiInputText = '';
+  isAiLoading = false;
+  aiFeedbackMessage = '';
+  aiFeedbackType: 'success' | 'warning' | 'error' = 'success';
+  parsedWodBlocks: any[] = [];
+  quickCreateTargetBlock: any = null;
+  quickCreateTargetIndex: number | null = null;
+
   // Catalog exercise search inside form
   exerciseSearchQuery = '';
 
@@ -1038,11 +1455,29 @@ export class WodsComponent implements OnInit {
   showQuickCreateModal = false;
   quickExerciseForm = this.getDefaultQuickExerciseForm();
 
+  // AI Configuration
+  aiProvider: 'local' | 'gemini' = 'local';
+  geminiApiKey = '';
+
   ngOnInit() {
     this.selectedDate = this.getTodayDateStr();
     this.updateWeekDays();
     this.loadCatalog();
     this.loadWods();
+    this.loadAiConfig();
+  }
+
+  loadAiConfig() {
+    this.db.getConfiguraciones().subscribe({
+      next: (configs) => {
+        const providerConfig = configs.find(c => c.clave === 'ai_provider');
+        const apiKeyConfig = configs.find(c => c.clave === 'gemini_api_key');
+        this.aiProvider = (providerConfig?.valor as 'local' | 'gemini') || 'local';
+        this.geminiApiKey = apiKeyConfig?.valor || '';
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error loading AI config in WodsComponent', err)
+    });
   }
 
   // --- DATE CONVENIENCE METHODS ---
@@ -1145,6 +1580,10 @@ export class WodsComponent implements OnInit {
     this.wodForm.fecha = this.selectedDate; // Program for the active view date
     this.wodFormEjercicios = [];
     this.exerciseSearchQuery = '';
+    this.aiInputText = '';
+    this.aiFeedbackMessage = '';
+    this.showAiPanel = false;
+    this.parsedWodBlocks = [];
     this.showModal = true;
   }
 
@@ -1281,11 +1720,151 @@ export class WodsComponent implements OnInit {
     // Can auto-fill descriptions or default values in the future if needed
   }
 
+  // --- AI CREATOR HELPER METHODS ---
+  toggleAiPanel() {
+    this.showAiPanel = !this.showAiPanel;
+    this.aiFeedbackMessage = '';
+    if (this.showAiPanel) {
+      this.loadAiConfig();
+    }
+  }
+
+  getAiProviderLabel(): string {
+    return this.aiProvider === 'gemini' ? 'Google Gemini API' : 'Analizador Local';
+  }
+
+  processTextWithAi() {
+    if (!this.aiInputText.trim()) return;
+    this.isAiLoading = true;
+    this.aiFeedbackMessage = 'Analizando texto...';
+    this.aiFeedbackType = 'success';
+
+    const handleResult = (res: any) => {
+      this.isAiLoading = false;
+      if (res && res.bloques && res.bloques.length > 0) {
+        this.parsedWodBlocks = res.bloques;
+        const numBloques = res.bloques.length;
+        this.aiFeedbackMessage = `¡Completado! Se detectaron ${numBloques} bloques de entrenamiento.`;
+        this.aiFeedbackType = 'success';
+      } else {
+        this.parsedWodBlocks = [];
+        this.aiFeedbackMessage = 'No se pudieron extraer bloques de entrenamiento. Inténtalo de nuevo.';
+        this.aiFeedbackType = 'warning';
+      }
+      this.cdr.markForCheck();
+    };
+
+    if (this.aiProvider === 'gemini' && this.geminiApiKey) {
+      this.parser.parseWithGemini(this.aiInputText, this.geminiApiKey, this.catalogEjercicios).subscribe({
+        next: (res) => handleResult(res),
+        error: (err) => {
+          console.error("Gemini API error, using local fallback", err);
+          const localRes = this.parser.parseWodText(this.aiInputText, this.catalogEjercicios);
+          handleResult(localRes);
+          this.aiFeedbackMessage = 'La API de Gemini falló. Se usó el Analizador Local como alternativa.';
+          this.aiFeedbackType = 'warning';
+          this.cdr.markForCheck();
+        }
+      });
+    } else {
+      const res = this.parser.parseWodText(this.aiInputText, this.catalogEjercicios);
+      handleResult(res);
+    }
+  }
+
+  removeParsedBlock(index: number) {
+    this.parsedWodBlocks.splice(index, 1);
+    this.cdr.markForCheck();
+  }
+
+  removeExerciseFromParsedBlock(bloque: any, index: number) {
+    bloque.ejercicios.splice(index, 1);
+    this.cdr.markForCheck();
+  }
+
+  discardParsedBlocks() {
+    this.parsedWodBlocks = [];
+    this.aiFeedbackMessage = '';
+    this.cdr.markForCheck();
+  }
+
+  saveAllParsedBlocks() {
+    if (this.parsedWodBlocks.length === 0) return;
+
+    // Verificar si hay algún ejercicio sin mapear
+    let hasUnmapped = false;
+    for (const bloque of this.parsedWodBlocks) {
+      for (const ex of bloque.ejercicios) {
+        if (!ex.ejercicio_id) {
+          hasUnmapped = true;
+          break;
+        }
+      }
+    }
+
+    if (hasUnmapped) {
+      this.aiFeedbackMessage = 'Por favor, asocia un ejercicio o descarta (✕) los que no coinciden (en amarillo) antes de guardar.';
+      this.aiFeedbackType = 'warning';
+      this.cdr.markForCheck();
+      return;
+    }
+
+    this.isAiLoading = true;
+    this.aiFeedbackMessage = 'Guardando todos los bloques...';
+
+    const targetFecha = this.wodForm.fecha || this.selectedDate || this.getTodayDateStr();
+
+    const saveRequests = this.parsedWodBlocks.map((bloque) => {
+      const wodPayload = {
+        titulo: bloque.titulo.trim(),
+        descripcion: bloque.descripcion?.trim() || '',
+        tipo: bloque.tipo,
+        fecha: targetFecha
+      };
+
+      const ejerciciosPayload = bloque.ejercicios.map((we: any, index: number) => ({
+        ejercicio_id: we.ejercicio_id,
+        series: we.series || null,
+        repeticiones: we.repeticiones?.trim() || null,
+        detalles: we.detalles?.trim() || null,
+        orden: index
+      }));
+
+      return this.db.createWod(wodPayload, ejerciciosPayload);
+    });
+
+    forkJoin(saveRequests).subscribe({
+      next: () => {
+        this.isAiLoading = false;
+        this.parsedWodBlocks = [];
+        this.loadWods();
+        this.closeModal();
+      },
+      error: (err) => {
+        this.isAiLoading = false;
+        this.aiFeedbackMessage = 'Error al guardar algunos bloques. Revisa la consola.';
+        this.aiFeedbackType = 'error';
+        console.error('Error saving blocks:', err);
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
   // --- QUICK EXERCISE CREATION IN WOD ---
   openQuickCreateExercise() {
     this.quickExerciseForm = this.getDefaultQuickExerciseForm();
-    // Default name search query
     this.quickExerciseForm.nombre = this.exerciseSearchQuery;
+    this.quickCreateTargetBlock = null;
+    this.quickCreateTargetIndex = null;
+    this.showQuickCreateModal = true;
+  }
+
+  openQuickCreateForParsedBlock(bloque: any, index: number) {
+    this.quickExerciseForm = this.getDefaultQuickExerciseForm();
+    const item = bloque.ejercicios[index];
+    this.quickExerciseForm.nombre = item ? (item.matchedEjercicioName || '') : '';
+    this.quickCreateTargetBlock = bloque;
+    this.quickCreateTargetIndex = index;
     this.showQuickCreateModal = true;
   }
 
@@ -1307,8 +1886,20 @@ export class WodsComponent implements OnInit {
       next: (createdEx) => {
         // 1. Add to local catalog immediately
         this.catalogEjercicios.push(createdEx);
-        // 2. Add to WOD list
-        this.addExerciseToWod(createdEx);
+
+        // 2. Add/Map depending on source context
+        if (this.quickCreateTargetBlock && this.quickCreateTargetIndex !== null) {
+          const item = this.quickCreateTargetBlock.ejercicios[this.quickCreateTargetIndex];
+          if (item) {
+            item.ejercicio_id = createdEx.id;
+            item.matchedEjercicioName = createdEx.nombre;
+          }
+          this.quickCreateTargetBlock = null;
+          this.quickCreateTargetIndex = null;
+        } else {
+          this.addExerciseToWod(createdEx);
+        }
+
         // 3. Close quick modal
         this.closeQuickCreate();
         // Reset query
@@ -1318,6 +1909,18 @@ export class WodsComponent implements OnInit {
       },
       error: (err) => console.error('Error al crear ejercicio rápido:', err)
     });
+  }
+
+  addPlaceholderExercise(bloque: any) {
+    const defaultExId = this.catalogEjercicios.length > 0 ? this.catalogEjercicios[0].id : '';
+    bloque.ejercicios.push({
+      ejercicio_id: defaultExId,
+      series: null,
+      repeticiones: null,
+      detalles: null,
+      orden: bloque.ejercicios.length
+    });
+    this.cdr.markForCheck();
   }
 
   // --- VIEW STYLING HELPERS ---

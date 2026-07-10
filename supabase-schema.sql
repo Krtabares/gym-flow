@@ -64,6 +64,13 @@ CREATE TABLE IF NOT EXISTS usuarios (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 7. Tabla de Configuración
+CREATE TABLE IF NOT EXISTS configuracion (
+    clave TEXT PRIMARY KEY,
+    valor TEXT NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Habilitar Row Level Security (RLS) en todas las tablas
 ALTER TABLE planes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE miembros ENABLE ROW LEVEL SECURITY;
@@ -71,6 +78,7 @@ ALTER TABLE pagos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE asistencia ENABLE ROW LEVEL SECURITY;
 ALTER TABLE anamnesis_plantilla ENABLE ROW LEVEL SECURITY;
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion ENABLE ROW LEVEL SECURITY;
 
 -- Crear políticas permisivas para desarrollo rápido (permite leer/escribir públicamente)
 CREATE POLICY "Permitir todo acceso público a planes" ON planes FOR ALL USING (true) WITH CHECK (true);
@@ -79,6 +87,7 @@ CREATE POLICY "Permitir todo acceso público a pagos" ON pagos FOR ALL USING (tr
 CREATE POLICY "Permitir todo acceso público a asistencia" ON asistencia FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir todo acceso público a plantilla" ON anamnesis_plantilla FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Permitir todo acceso público a usuarios" ON usuarios FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Permitir todo acceso público a configuracion" ON configuracion FOR ALL USING (true) WITH CHECK (true);
 
 -- Insertar la plantilla de preguntas por defecto si no existe
 INSERT INTO anamnesis_plantilla (id, preguntas)
@@ -93,5 +102,8 @@ VALUES ('default', '[
 ]'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
--- Insertar Datos de Prueba Iniciales (Opcional, ejecutar si se desea tener un dashboard poblado)
--- Nota: Para que los miembros de prueba funcionen correctamente, ejecuta primero los planes y luego los miembros referenciando los IDs correctos.
+-- Insertar valores de configuración por defecto
+INSERT INTO configuracion (clave, valor) VALUES
+('gemini_api_key', ''),
+('ai_provider', 'local')
+ON CONFLICT (clave) DO NOTHING;

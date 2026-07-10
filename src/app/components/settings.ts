@@ -1,6 +1,7 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { SupabaseService } from '../services/supabase.service';
 import { PreguntaAnamnesis } from '../models';
 import { environment } from '../../environments/environment';
@@ -27,6 +28,10 @@ import { environment } from '../../environments/environment';
         <button class="tab-btn" [class.active]="activeTab === 'anamnesis'" (click)="activeTab = 'anamnesis'">
           <span class="tab-icon">📋</span>
           <span>Plantilla de Anamnesis</span>
+        </button>
+        <button class="tab-btn" [class.active]="activeTab === 'ai'" (click)="activeTab = 'ai'">
+          <span class="tab-icon">✨</span>
+          <span>Configuración de IA</span>
         </button>
       </div>
 
@@ -189,6 +194,52 @@ import { environment } from '../../environments/environment';
               <span>Guardar Cambios de Plantilla</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      <!-- Contenido de Pestaña: IA -->
+      <div class="tab-content animate-fade-in" *ngIf="activeTab === 'ai'">
+        <div class="glass-card ai-settings-card">
+          <h3>Configuración del Creador de WODs con IA</h3>
+          <p class="desc">Personaliza el motor inteligente para parsear y rellenar automáticamente los entrenamientos desde texto plano.</p>
+
+          <form (submit)="$event.preventDefault(); saveAiSettings()">
+            <div class="form-group mt-20">
+              <label class="form-label">Proveedor de Inteligencia Artificial</label>
+              <select class="form-control select-control" name="aiProvider" [(ngModel)]="aiProvider">
+                <option value="local">Analizador Local (Gratuito, Offline e Instantáneo)</option>
+                <option value="gemini">Google Gemini 1.5 Flash (Gratuito, Requiere Internet y Clave API)</option>
+              </select>
+            </div>
+
+            <div class="form-group mt-20" *ngIf="aiProvider === 'gemini'">
+              <label class="form-label">Clave API de Google Gemini</label>
+              <div class="api-key-input-wrapper">
+                <input 
+                  [type]="showApiKey ? 'text' : 'password'" 
+                  class="form-control" 
+                  name="geminiApiKey"
+                  [(ngModel)]="geminiApiKey" 
+                  placeholder="Pega tu clave AIzaSy..."
+                >
+                <button type="button" class="btn-toggle-visibility" (click)="showApiKey = !showApiKey">
+                  {{ showApiKey ? '👁️' : '🙈' }}
+                </button>
+              </div>
+              <div class="tip-box mt-10">
+                <span class="info-icon">💡</span>
+                <p class="tip-text-block">
+                  Puedes obtener una clave de API <strong>totalmente gratis</strong> ingresando a <a href="https://aistudio.google.com/" target="_blank" class="link-glow">Google AI Studio</a> con tu cuenta de Google. Selecciona el modelo <strong>Gemini 1.5 Flash</strong> que ofrece un plan gratuito generoso de hasta 15 solicitudes por minuto.
+                </p>
+              </div>
+            </div>
+
+            <div class="form-actions mt-24">
+              <button type="submit" class="btn btn-primary">
+                <span>Guardar Configuración de IA</span>
+              </button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -521,17 +572,74 @@ import { environment } from '../../environments/environment';
       padding: 6px 14px;
       font-size: 0.78rem;
     }
+
+    /* AI Settings tab */
+    .ai-settings-card {
+      max-width: 600px;
+    }
+    .api-key-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    .api-key-input-wrapper input {
+      padding-right: 48px;
+    }
+    .btn-toggle-visibility {
+      position: absolute;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: #71717a;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: color 0.15s;
+    }
+    .btn-toggle-visibility:hover {
+      color: #fff;
+    }
+    .tip-box {
+      display: flex;
+      gap: 12px;
+      background: rgba(0, 255, 136, 0.03);
+      border: 1px solid rgba(0, 255, 136, 0.1);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+    .info-icon {
+      font-size: 1.25rem;
+    }
+    .tip-text-block {
+      font-size: 0.85rem;
+      color: #a1a1aa;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .link-glow {
+      color: var(--primary);
+      text-decoration: underline;
+      font-weight: 700;
+    }
+    .link-glow:hover {
+      text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    }
   `]
 })
 export class SettingsComponent implements OnInit {
   private db = inject(SupabaseService);
   private cdr = inject(ChangeDetectorRef);
 
-  activeTab: 'database' | 'anamnesis' = 'database';
+  activeTab: 'database' | 'anamnesis' | 'ai' = 'database';
   isMockMode = true;
   supabaseUrl = '';
   supabaseKey = '';
   maskedKey = 'No configurada';
+
+  // AI Configurations
+  aiProvider: 'local' | 'gemini' = 'local';
+  geminiApiKey = '';
+  showApiKey = false;
 
   stats = {
     miembros: 0,
@@ -566,6 +674,19 @@ export class SettingsComponent implements OnInit {
 
     this.loadStats();
     this.loadAnamnesis();
+
+    // Cargar configuraciones de IA
+    this.db.getConfiguraciones().subscribe({
+      next: (configs) => {
+        const providerConfig = configs.find(c => c.clave === 'ai_provider');
+        const apiKeyConfig = configs.find(c => c.clave === 'gemini_api_key');
+        
+        this.aiProvider = (providerConfig?.valor as 'local' | 'gemini') || 'local';
+        this.geminiApiKey = apiKeyConfig?.valor || '';
+        this.cdr.markForCheck();
+      },
+      error: (err) => console.error('Error loading AI configurations', err)
+    });
   }
 
   loadStats() {
@@ -644,6 +765,20 @@ export class SettingsComponent implements OnInit {
       },
       error: (err) => {
         alert('Error al guardar la plantilla: ' + (err.message || err));
+      }
+    });
+  }
+
+  saveAiSettings() {
+    forkJoin({
+      provider: this.db.saveConfiguracion('ai_provider', this.aiProvider),
+      apiKey: this.db.saveConfiguracion('gemini_api_key', this.geminiApiKey.trim())
+    }).subscribe({
+      next: () => {
+        alert('Configuración de IA guardada exitosamente.');
+      },
+      error: (err) => {
+        alert('Error al guardar la configuración: ' + (err.message || err));
       }
     });
   }

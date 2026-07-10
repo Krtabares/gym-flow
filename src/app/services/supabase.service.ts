@@ -3,7 +3,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Observable, from, of, throwError } from 'rxjs';
 import { map, catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import { Plan, Miembro, Pago, Asistencia, PreguntaAnamnesis, Ejercicio, Wod, WodEjercicio, Usuario, MarcaMiembro } from '../models';
+import { Plan, Miembro, Pago, Asistencia, PreguntaAnamnesis, Ejercicio, Wod, WodEjercicio, Usuario, MarcaMiembro, Configuracion } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -865,6 +865,49 @@ export class SupabaseService {
 
     return this.supabaseQuery(
       this.supabase!.from('anamnesis_plantilla').upsert({ id: 'default', preguntas: preguntas })
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return true;
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  // --- CONFIGURACIÓN ---
+  getConfiguraciones(): Observable<Configuracion[]> {
+    if (this.isMockMode) {
+      const provider = localStorage.getItem('gf_ai_provider') || 'local';
+      const apiKey = localStorage.getItem('gf_gemini_api_key') || '';
+      return of([
+        { clave: 'ai_provider', valor: provider },
+        { clave: 'gemini_api_key', valor: apiKey }
+      ]);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('configuracion').select('*')
+    ).pipe(
+      map(response => {
+        if (response.error) throw response.error;
+        return response.data || [];
+      }),
+      catchError(err => throwError(() => err))
+    );
+  }
+
+  saveConfiguracion(clave: string, valor: string): Observable<boolean> {
+    if (this.isMockMode) {
+      if (clave === 'ai_provider') {
+        localStorage.setItem('gf_ai_provider', valor);
+      } else if (clave === 'gemini_api_key') {
+        localStorage.setItem('gf_gemini_api_key', valor);
+      }
+      return of(true);
+    }
+
+    return this.supabaseQuery(
+      this.supabase!.from('configuracion').upsert({ clave, valor, updated_at: new Date().toISOString() })
     ).pipe(
       map(response => {
         if (response.error) throw response.error;
