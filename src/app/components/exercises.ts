@@ -2,7 +2,7 @@ import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../services/supabase.service';
-import { Ejercicio } from '../models';
+import { Ejercicio, EjercicioCategoria, EJERCICIO_CATEGORIAS } from '../models';
 
 @Component({
   selector: 'app-exercises',
@@ -47,24 +47,11 @@ import { Ejercicio } from '../models';
               </button>
               <button 
                 class="chip" 
-                [class.active]="selectedCategory === 'Gimnasia'" 
-                (click)="setCategory('Gimnasia')"
+                *ngFor="let cat of exerciseCategories"
+                [class.active]="selectedCategory === cat" 
+                (click)="setCategory(cat)"
               >
-                🤸 Gimnasia
-              </button>
-              <button 
-                class="chip" 
-                [class.active]="selectedCategory === 'Halterofilia'" 
-                (click)="setCategory('Halterofilia')"
-              >
-                🏋️ Halterofilia
-              </button>
-              <button 
-                class="chip" 
-                [class.active]="selectedCategory === 'Monoestructural'" 
-                (click)="setCategory('Monoestructural')"
-              >
-                🏃 Monoestructural
+                {{ getCategoryEmoji(cat) }} {{ cat }}
               </button>
             </div>
           </div>
@@ -156,9 +143,9 @@ import { Ejercicio } from '../models';
                   [(ngModel)]="exerciseForm.categoria" 
                   required
                 >
-                  <option value="Gimnasia">Gimnasia</option>
-                  <option value="Halterofilia">Halterofilia</option>
-                  <option value="Monoestructural">Monoestructural</option>
+                  <option *ngFor="let cat of exerciseCategories" [value]="cat">
+                    {{ getCategoryEmoji(cat) }} {{ cat }}
+                  </option>
                 </select>
               </div>
               
@@ -341,6 +328,16 @@ import { Ejercicio } from '../models';
       color: var(--warning);
       border: 1px solid rgba(245, 158, 11, 0.2);
     }
+    .badge-estiramiento {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    .badge-calentamiento {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
     .badge-equipment {
       background: rgba(255, 255, 255, 0.04);
       color: #d4d4d8;
@@ -441,6 +438,18 @@ import { Ejercicio } from '../models';
 export class ExercisesComponent implements OnInit {
   private db = inject(SupabaseService);
   private cdr = inject(ChangeDetectorRef);
+  readonly exerciseCategories = EJERCICIO_CATEGORIAS;
+
+  getCategoryEmoji(category: string): string {
+    switch (category) {
+      case 'Gimnasia': return '🤸';
+      case 'Halterofilia': return '🏋️';
+      case 'Monoestructural': return '🏃';
+      case 'Estiramiento': return '🧘';
+      case 'Calentamiento': return '🔥';
+      default: return '⚙️';
+    }
+  }
 
   ejercicios: Ejercicio[] = [];
   filteredEjercicios: Ejercicio[] = [];
@@ -512,6 +521,8 @@ export class ExercisesComponent implements OnInit {
       case 'Gimnasia': return 'badge-gimnasia';
       case 'Halterofilia': return 'badge-halterofilia';
       case 'Monoestructural': return 'badge-monoestructural';
+      case 'Estiramiento': return 'badge-estiramiento';
+      case 'Calentamiento': return 'badge-calentamiento';
       default: return 'badge-equipment';
     }
   }

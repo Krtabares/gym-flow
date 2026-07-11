@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { SupabaseService } from '../services/supabase.service';
-import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP } from '../models';
+import { Wod, WodEjercicio, Ejercicio, WodTipo, WOD_TYPES, WOD_TIMER_MAP, EjercicioCategoria, EJERCICIO_CATEGORIAS } from '../models';
 import { WodParserService } from '../services/wod-parser.service';
 
 @Component({
@@ -220,7 +220,7 @@ import { WodParserService } from '../services/wod-parser.service';
           <div class="parsed-blocks-preview animate-fade-in" *ngIf="parsedWodBlocks.length > 0 && !isEditMode">
             <h4 class="preview-title">📋 Bloques Detectados (Revisa y edita antes de guardar)</h4>
             
-            <div class="parsed-block-card glass-card" *ngFor="let bloque of parsedWodBlocks; let bIdx = index">
+            <div class="parsed-block-card glass-card" *ngFor="let bloque of parsedWodBlocks; let bIdx = index" [class.active-card]="isCardActive(bIdx)">
               <div class="block-card-header flex-between">
                 <h5>Bloque {{ bIdx + 1 }}</h5>
                 <button type="button" class="btn-remove-block" (click)="removeParsedBlock(bIdx)" title="Descartar Bloque">✕ Quitar</button>
@@ -252,19 +252,55 @@ import { WodParserService } from '../services/wod-parser.service';
                   </button>
                 </div>
                 <div class="exercise-preview-list" *ngIf="bloque.ejercicios.length > 0; else noExPreview">
-                  <div class="ex-preview-item animate-fade-in" *ngFor="let item of bloque.ejercicios; let eIdx = index">
+                  <div class="ex-preview-item animate-fade-in" *ngFor="let item of bloque.ejercicios; let eIdx = index" [class.active-dropdown-item]="isDropdownActive(bIdx, eIdx)">
                     <div class="ex-preview-row">
                       <div class="flex-gap-2 align-center">
                         <span class="ex-preview-number">{{ eIdx + 1 }}</span>
-                        <select 
-                          class="form-control select-control ex-selector-dropdown" 
-                          [class.unmatched]="!item.ejercicio_id"
-                          name="ex_select_{{bIdx}}_{{eIdx}}" 
-                          [(ngModel)]="item.ejercicio_id"
-                        >
-                          <option value="" disabled *ngIf="!item.ejercicio_id">⚠️ No coincide: "{{ item.matchedEjercicioName }}"</option>
-                          <option *ngFor="let ex of catalogEjercicios" [value]="ex.id">{{ ex.nombre }}</option>
-                        </select>
+                        <!-- CONTENEDOR CUSTOM SEARCHABLE SELECT -->
+                        <div class="custom-select-container">
+                          <!-- BACKDROP LOCAL PARA ESTE DROPDOWN -->
+                          <div class="dropdown-backdrop" *ngIf="isDropdownActive(bIdx, eIdx)" (click)="toggleDropdown(bIdx, eIdx); $event.stopPropagation()"></div>
+
+                          <!-- Trigger button that looks like a select box -->
+                          <button 
+                            type="button" 
+                            class="form-control select-control ex-selector-trigger"
+                            [class.unmatched]="!item.ejercicio_id"
+                            (click)="toggleDropdown(bIdx, eIdx); $event.stopPropagation()"
+                          >
+                            <span class="trigger-text" *ngIf="item.ejercicio_id">{{ getExerciseName(item.ejercicio_id) }}</span>
+                            <span class="trigger-text" *ngIf="!item.ejercicio_id">⚠️ No coincide: "{{ item.matchedEjercicioName }}"</span>
+                            <span class="dropdown-arrow">▼</span>
+                          </button>
+
+                          <!-- Dropdown List Overlay -->
+                          <div class="custom-select-dropdown glass-card animate-fade-in" *ngIf="isDropdownActive(bIdx, eIdx)" (click)="$event.stopPropagation()">
+                            <div class="dropdown-search-box">
+                              <input 
+                                type="text" 
+                                class="form-control dropdown-search-input" 
+                                placeholder="Buscar ejercicio..."
+                                [(ngModel)]="dropdownSearchQueries[bIdx + '_' + eIdx]"
+                                name="dropdown_search_{{bIdx}}_{{eIdx}}"
+                                (click)="$event.stopPropagation()"
+                              >
+                            </div>
+                            <div class="dropdown-options-list">
+                              <div 
+                                class="dropdown-option" 
+                                *ngFor="let ex of getFilteredExercises(dropdownSearchQueries[bIdx + '_' + eIdx])"
+                                (click)="selectExerciseForParsedBlock(bloque, eIdx, ex); toggleDropdown(bIdx, eIdx)"
+                                [class.selected]="item.ejercicio_id === ex.id"
+                              >
+                                <span class="ex-name">{{ ex.nombre }}</span>
+                                <span class="badge-category" [ngClass]="getCategoryBadgeClass(ex.categoria)">{{ ex.categoria }}</span>
+                              </div>
+                              <div class="dropdown-no-results" *ngIf="getFilteredExercises(dropdownSearchQueries[bIdx + '_' + eIdx]).length === 0">
+                                Sin resultados
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                         <button 
                           type="button" 
                           class="btn-create-ex-inline" 
@@ -518,9 +554,9 @@ import { WodParserService } from '../services/wod-parser.service';
                   [(ngModel)]="quickExerciseForm.categoria" 
                   required
                 >
-                  <option value="Gimnasia">🤸 Gimnasia</option>
-                  <option value="Halterofilia">🏋️ Halterofilia</option>
-                  <option value="Monoestructural">🏃 Monoestructural</option>
+                  <option *ngFor="let cat of exerciseCategories" [value]="cat">
+                    {{ getCategoryEmoji(cat) }} {{ cat }}
+                  </option>
                 </select>
               </div>
 
@@ -822,6 +858,8 @@ import { WodParserService } from '../services/wod-parser.service';
     .badge-gim { background: rgba(6, 182, 212, 0.1); color: var(--accent); }
     .badge-halt { background: rgba(139, 92, 246, 0.1); color: var(--secondary); }
     .badge-mono { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+    .badge-estiramiento { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .badge-calentamiento { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
     .exercise-specs {
       display: flex;
@@ -1276,6 +1314,11 @@ import { WodParserService } from '../services/wod-parser.service';
       display: flex;
       flex-direction: column;
       gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+    .parsed-block-card.active-card {
+      z-index: 9998 !important;
     }
     .block-card-header {
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -1321,6 +1364,11 @@ import { WodParserService } from '../services/wod-parser.service';
       border: 1px solid rgba(255, 255, 255, 0.04);
       border-radius: var(--radius-sm);
       padding: 10px 14px;
+      position: relative;
+      z-index: 1;
+    }
+    .ex-preview-item.active-dropdown-item {
+      z-index: 9999 !important;
     }
     .ex-preview-row {
       display: flex;
@@ -1334,14 +1382,125 @@ import { WodParserService } from '../services/wod-parser.service';
       color: var(--primary);
       font-size: 0.9rem;
     }
-    .ex-selector-dropdown {
-      height: 34px !important;
-      padding: 4px 30px 4px 10px !important;
-      font-size: 0.82rem !important;
+    /* Custom Searchable Select */
+    .custom-select-container {
+      position: relative;
       width: 220px;
+      display: inline-block;
+    }
+    .ex-selector-trigger {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      height: 34px !important;
+      padding: 4px 10px !important;
+      font-size: 0.82rem !important;
       background-color: rgba(0, 0, 0, 0.4) !important;
-      border-color: rgba(255, 255, 255, 0.1) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #fff;
       cursor: pointer;
+      text-align: left;
+      border-radius: var(--radius-sm);
+      transition: all 0.2s ease;
+    }
+    .ex-selector-trigger:focus, .ex-selector-trigger:hover {
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    .ex-selector-trigger.unmatched {
+      border: 1px solid rgba(245, 158, 11, 0.4) !important;
+      background-color: rgba(245, 158, 11, 0.08) !important;
+      color: #ffe4b3 !important;
+    }
+    .ex-selector-trigger .trigger-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+      display: inline-block;
+    }
+    .ex-selector-trigger .dropdown-arrow {
+      font-size: 0.6rem;
+      color: #71717a;
+      transition: transform 0.2s;
+    }
+    .custom-select-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      min-width: 250px;
+      max-height: 250px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      background: #12121d; /* Solid color to prevent overlay transparency issues */
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-glow);
+      border-radius: var(--radius-md);
+      margin-top: 4px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+    .dropdown-search-box {
+      padding: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .dropdown-search-input {
+      height: 30px !important;
+      font-size: 0.8rem !important;
+      background: rgba(0, 0, 0, 0.3) !important;
+      border-color: rgba(255, 255, 255, 0.08) !important;
+      padding: 4px 10px !important;
+      width: 100%;
+    }
+    .dropdown-options-list {
+      overflow-y: auto;
+      flex-grow: 1;
+      max-height: 200px;
+    }
+    .dropdown-option {
+      padding: 8px 12px;
+      font-size: 0.82rem;
+      color: #a1a1aa;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.15s ease;
+    }
+    .dropdown-option:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff;
+    }
+    .dropdown-option.selected {
+      background: rgba(0, 255, 136, 0.08);
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .dropdown-no-results {
+      padding: 12px;
+      text-align: center;
+      color: #71717a;
+      font-size: 0.8rem;
+    }
+    .dropdown-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 990;
+      background: transparent;
+    }
+    .dropdown-option .badge-category {
+      font-size: 0.6rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 700;
     }
     .ex-preview-specs {
       display: flex;
@@ -1407,11 +1566,7 @@ import { WodParserService } from '../services/wod-parser.service';
       background: rgba(0, 255, 136, 0.15);
       border-color: var(--primary);
     }
-    .ex-selector-dropdown.unmatched {
-      border: 1px solid rgba(245, 158, 11, 0.4) !important;
-      background-color: rgba(245, 158, 11, 0.08) !important;
-      color: #ffe4b3 !important;
-    }
+    /* Unmatched selector styling handled by trigger class */
     .btn-create-ex-inline.highlight {
       background: rgba(245, 158, 11, 0.15) !important;
       border: 1px solid rgba(245, 158, 11, 0.4) !important;
@@ -1561,6 +1716,18 @@ export class WodsComponent implements OnInit {
   // Constants
   readonly wodTypes = WOD_TYPES;
   readonly WOD_TIMER_MAP = WOD_TIMER_MAP;
+  readonly exerciseCategories = EJERCICIO_CATEGORIAS;
+
+  getCategoryEmoji(category: string): string {
+    switch (category) {
+      case 'Gimnasia': return '🤸';
+      case 'Halterofilia': return '🏋️';
+      case 'Monoestructural': return '🏃';
+      case 'Estiramiento': return '🧘';
+      case 'Calentamiento': return '🔥';
+      default: return '⚙️';
+    }
+  }
 
   // WOD Modal State
   showModal = false;
@@ -1578,6 +1745,10 @@ export class WodsComponent implements OnInit {
   parsedWodBlocks: any[] = [];
   quickCreateTargetBlock: any = null;
   quickCreateTargetIndex: number | null = null;
+
+  // Custom Select Searchable Dropdowns
+  activeDropdown: string | null = null;
+  dropdownSearchQueries: Record<string, string> = {};
 
   // Catalog exercise search inside form
   exerciseSearchQuery = '';
@@ -1749,6 +1920,7 @@ export class WodsComponent implements OnInit {
 
   closeModal() {
     this.showModal = false;
+    this.closeAllDropdowns();
   }
 
   saveWod() {
@@ -1971,6 +2143,48 @@ export class WodsComponent implements OnInit {
     this.parsedWodBlocks = [];
     this.aiFeedbackMessage = '';
     this.aiSelectedImage = null;
+    this.closeAllDropdowns();
+    this.cdr.markForCheck();
+  }
+
+  toggleDropdown(bIdx: number, eIdx: number) {
+    const key = bIdx + '_' + eIdx;
+    if (this.activeDropdown === key) {
+      this.activeDropdown = null;
+    } else {
+      this.activeDropdown = key;
+      this.dropdownSearchQueries[key] = '';
+    }
+    this.cdr.markForCheck();
+  }
+
+  isDropdownActive(bIdx: number, eIdx: number): boolean {
+    return this.activeDropdown === (bIdx + '_' + eIdx);
+  }
+
+  isCardActive(bIdx: number): boolean {
+    return !!this.activeDropdown && this.activeDropdown.startsWith(bIdx + '_');
+  }
+
+  closeAllDropdowns() {
+    this.activeDropdown = null;
+    this.cdr.markForCheck();
+  }
+
+  getFilteredExercises(query: string): Ejercicio[] {
+    if (!query || !query.trim()) {
+      return this.catalogEjercicios;
+    }
+    const q = query.toLowerCase().trim();
+    return this.catalogEjercicios.filter(ex => 
+      ex.nombre.toLowerCase().includes(q) || 
+      ex.categoria.toLowerCase().includes(q)
+    );
+  }
+
+  selectExerciseForParsedBlock(bloque: any, eIdx: number, ex: Ejercicio) {
+    bloque.ejercicios[eIdx].ejercicio_id = ex.id;
+    bloque.ejercicios[eIdx].matchedEjercicioName = ex.nombre;
     this.cdr.markForCheck();
   }
 
@@ -2133,6 +2347,8 @@ export class WodsComponent implements OnInit {
       case 'Gimnasia': return 'badge-gim';
       case 'Halterofilia': return 'badge-halt';
       case 'Monoestructural': return 'badge-mono';
+      case 'Estiramiento': return 'badge-estiramiento';
+      case 'Calentamiento': return 'badge-calentamiento';
       default: return 'badge-gim';
     }
   }

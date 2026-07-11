@@ -61,10 +61,26 @@ export interface Asistencia {
   miembro?: Miembro;
 }
 
+export enum EjercicioCategoria {
+  Gimnasia = 'Gimnasia',
+  Halterofilia = 'Halterofilia',
+  Monoestructural = 'Monoestructural',
+  Estiramiento = 'Estiramiento',
+  Calentamiento = 'Calentamiento'
+}
+
+export const EJERCICIO_CATEGORIAS = [
+  EjercicioCategoria.Gimnasia,
+  EjercicioCategoria.Halterofilia,
+  EjercicioCategoria.Monoestructural,
+  EjercicioCategoria.Estiramiento,
+  EjercicioCategoria.Calentamiento
+] as const;
+
 export interface Ejercicio {
   id: string;
   nombre: string;
-  categoria: string;
+  categoria: EjercicioCategoria | string;
   descripcion: string;
   equipamiento: string;
   url_video?: string;
