@@ -105,5 +105,6 @@ ON CONFLICT (id) DO NOTHING;
 -- Insertar valores de configuración por defecto
 INSERT INTO configuracion (clave, valor) VALUES
 ('gemini_api_key', ''),
+('gemini_api_key_images', ''),
 ('ai_provider', 'local')
 ON CONFLICT (clave) DO NOTHING;

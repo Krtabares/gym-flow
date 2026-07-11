@@ -33,6 +33,10 @@ import { environment } from '../../environments/environment';
           <span class="tab-icon">✨</span>
           <span>Configuración de IA</span>
         </button>
+        <button class="tab-btn" [class.active]="activeTab === 'timer'" (click)="activeTab = 'timer'">
+          <span class="tab-icon">⏱️</span>
+          <span>Cronómetro & Sonidos</span>
+        </button>
       </div>
 
       <!-- Contenido de Pestaña: Base de Datos -->
@@ -213,7 +217,7 @@ import { environment } from '../../environments/environment';
             </div>
 
             <div class="form-group mt-20" *ngIf="aiProvider === 'gemini'">
-              <label class="form-label">Clave API de Google Gemini</label>
+              <label class="form-label">Clave API de Google Gemini (Texto Plano)</label>
               <div class="api-key-input-wrapper">
                 <input 
                   [type]="showApiKey ? 'text' : 'password'" 
@@ -234,9 +238,245 @@ import { environment } from '../../environments/environment';
               </div>
             </div>
 
+            <!-- Contraseña Root para Administrador -->
+            <div class="form-group mt-20" *ngIf="aiProvider === 'gemini'">
+              <label class="form-label">Contraseña de Administrador (Root)</label>
+              <input 
+                type="password" 
+                class="form-control" 
+                name="rootPasswordInput"
+                [(ngModel)]="rootPasswordInput" 
+                placeholder="Ingresa contraseña root para desbloquear clave de imágenes"
+              >
+              <span class="root-status-hint" [class.unlocked]="rootPasswordInput === 'root123'">
+                {{ rootPasswordInput === 'root123' ? '🔓 Acceso Root Concedido' : '🔒 Bloqueado (Se requiere contraseña root para configurar imágenes)' }}
+              </span>
+            </div>
+
+            <!-- Clave de imágenes protegida por root -->
+            <div class="form-group mt-20" *ngIf="aiProvider === 'gemini'">
+              <label class="form-label">Clave API de Google Gemini para Imágenes</label>
+              <div class="api-key-input-wrapper">
+                <input 
+                  [type]="showApiKeyImages && rootPasswordInput === 'root123' ? 'text' : 'password'" 
+                  class="form-control" 
+                  name="geminiApiKeyImages"
+                  [(ngModel)]="geminiApiKeyImages" 
+                  placeholder="Introduce la contraseña root para habilitar..."
+                  [disabled]="rootPasswordInput !== 'root123'"
+                >
+                <button 
+                  type="button" 
+                  class="btn-toggle-visibility" 
+                  (click)="showApiKeyImages = !showApiKeyImages"
+                  [disabled]="rootPasswordInput !== 'root123'"
+                >
+                  {{ showApiKeyImages ? '👁️' : '🙈' }}
+                </button>
+              </div>
+              <div class="tip-box mt-10" *ngIf="rootPasswordInput === 'root123'">
+                <span class="info-icon">🔑</span>
+                <p class="tip-text-block">
+                  Esta clave de API se usará exclusivamente para la extracción de texto a partir de imágenes de pizarras o pantallas.
+                </p>
+              </div>
+            </div>
+
             <div class="form-actions mt-24">
               <button type="submit" class="btn btn-primary">
                 <span>Guardar Configuración de IA</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Contenido de Pestaña: Cronómetro & Sonidos -->
+      <div class="tab-content animate-fade-in" *ngIf="activeTab === 'timer'">
+        <div class="glass-card timer-settings-card">
+          <h3>Configuración Personalizada de Sonidos</h3>
+          <p class="desc">Configura el tipo de alerta (Voz MP3, Pitido o Silencio) para cada evento específico del cronómetro.</p>
+
+          <form (submit)="$event.preventDefault(); saveTimerSettings()">
+            <div class="timer-sounds-table-wrapper mt-20">
+              <table class="timer-sounds-table">
+                <thead>
+                  <tr>
+                    <th>Evento / Alerta</th>
+                    <th>🗣️ Voz MP3</th>
+                    <th>🔊 Pitido</th>
+                    <th>🔇 Silencio</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="sound-event-info">
+                        <strong>Cuenta Regresiva (Prep)</strong>
+                        <span class="event-desc">Conteo regresivo de preparación (ej. 10 segundos).</span>
+                      </div>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_prep" value="mp3" [(ngModel)]="timerSoundConfig.prep">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_prep" value="beep" [(ngModel)]="timerSoundConfig.prep">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_prep" value="none" [(ngModel)]="timerSoundConfig.prep">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>
+                      <div class="sound-event-info">
+                        <strong>Mitad de Tiempo</strong>
+                        <span class="event-desc">Aviso al transcurrir el 50% del entrenamiento.</span>
+                      </div>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_halfTime" value="mp3" [(ngModel)]="timerSoundConfig.halfTime">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_halfTime" value="beep" [(ngModel)]="timerSoundConfig.halfTime">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_halfTime" value="none" [(ngModel)]="timerSoundConfig.halfTime">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>
+                      <div class="sound-event-info">
+                        <strong>Un Minuto Restante</strong>
+                        <span class="event-desc">Aviso cuando resta exactamente 1 minuto.</span>
+                      </div>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_oneMinute" value="mp3" [(ngModel)]="timerSoundConfig.oneMinute">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_oneMinute" value="beep" [(ngModel)]="timerSoundConfig.oneMinute">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_oneMinute" value="none" [(ngModel)]="timerSoundConfig.oneMinute">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>
+                      <div class="sound-event-info">
+                        <strong>Diez Segundos Restantes</strong>
+                        <span class="event-desc">Aviso al restar 10 segundos para el final.</span>
+                      </div>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_tenSeconds" value="mp3" [(ngModel)]="timerSoundConfig.tenSeconds">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_tenSeconds" value="beep" [(ngModel)]="timerSoundConfig.tenSeconds">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_tenSeconds" value="none" [(ngModel)]="timerSoundConfig.tenSeconds">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>
+                      <div class="sound-event-info">
+                        <strong>Última Ronda</strong>
+                        <span class="event-desc">Aviso al iniciar la última ronda (EMOM/Tabata).</span>
+                      </div>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_lastRound" value="mp3" [(ngModel)]="timerSoundConfig.lastRound">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_lastRound" value="beep" [(ngModel)]="timerSoundConfig.lastRound">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_lastRound" value="none" [(ngModel)]="timerSoundConfig.lastRound">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td>
+                      <div class="sound-event-info">
+                        <strong>Entrenamiento Completado</strong>
+                        <span class="event-desc">Sonido de celebración al finalizar el tiempo.</span>
+                      </div>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_finished" value="mp3" [(ngModel)]="timerSoundConfig.finished">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_finished" value="beep" [(ngModel)]="timerSoundConfig.finished">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                    <td>
+                      <label class="sound-radio-label">
+                        <input type="radio" name="sound_finished" value="none" [(ngModel)]="timerSoundConfig.finished">
+                        <span class="custom-radio"></span>
+                      </label>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="form-actions mt-24">
+              <button type="submit" class="btn btn-primary">
+                <span>Guardar Configuración de Sonido</span>
               </button>
             </div>
           </form>
@@ -573,8 +813,8 @@ import { environment } from '../../environments/environment';
       font-size: 0.78rem;
     }
 
-    /* AI Settings tab */
-    .ai-settings-card {
+    /* AI & Timer Settings tab */
+    .ai-settings-card, .timer-settings-card {
       max-width: 600px;
     }
     .api-key-input-wrapper {
@@ -624,13 +864,121 @@ import { environment } from '../../environments/environment';
     .link-glow:hover {
       text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
     }
+
+    /* Table Sounds Style */
+    .timer-sounds-table-wrapper {
+      overflow-x: auto;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-md);
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .timer-sounds-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .timer-sounds-table th, .timer-sounds-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+    .timer-sounds-table th {
+      background: rgba(255, 255, 255, 0.02);
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #71717a;
+      text-align: center;
+    }
+    .timer-sounds-table th:first-child {
+      text-align: left;
+    }
+    .timer-sounds-table td {
+      font-size: 0.9rem;
+      color: #e4e4e7;
+    }
+    .timer-sounds-table tr:last-child td {
+      border-bottom: none;
+    }
+    .sound-event-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .sound-event-info strong {
+      color: #fff;
+    }
+    .event-desc {
+      font-size: 0.76rem;
+      color: #71717a;
+    }
+    .timer-sounds-table td:not(:first-child) {
+      text-align: center;
+    }
+    .sound-radio-label {
+      position: relative;
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+    .sound-radio-label input {
+      position: absolute;
+      opacity: 0;
+      cursor: pointer;
+    }
+    .custom-radio {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 18px;
+      width: 18px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .sound-radio-label:hover input ~ .custom-radio {
+      border-color: rgba(255, 255, 255, 0.4);
+    }
+    .sound-radio-label input:checked ~ .custom-radio {
+      background-color: rgba(0, 255, 136, 0.12);
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+    .custom-radio:after {
+      content: "";
+      position: absolute;
+      display: none;
+    }
+    .sound-radio-label input:checked ~ .custom-radio:after {
+      display: block;
+    }
+    .sound-radio-label .custom-radio:after {
+      top: 5px;
+      left: 5px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--primary);
+    }
+    .root-status-hint {
+      display: block;
+      font-size: 0.76rem;
+      margin-top: 4px;
+      font-weight: 700;
+      color: var(--danger);
+    }
+    .root-status-hint.unlocked {
+      color: var(--primary);
+    }
   `]
 })
 export class SettingsComponent implements OnInit {
   private db = inject(SupabaseService);
   private cdr = inject(ChangeDetectorRef);
 
-  activeTab: 'database' | 'anamnesis' | 'ai' = 'database';
+  activeTab: 'database' | 'anamnesis' | 'ai' | 'timer' = 'database';
   isMockMode = true;
   supabaseUrl = '';
   supabaseKey = '';
@@ -639,7 +987,20 @@ export class SettingsComponent implements OnInit {
   // AI Configurations
   aiProvider: 'local' | 'gemini' = 'local';
   geminiApiKey = '';
+  geminiApiKeyImages = '';
   showApiKey = false;
+  showApiKeyImages = false;
+  rootPasswordInput = '';
+  
+  // Timer Sound Configurations
+  timerSoundConfig = {
+    prep: 'mp3' as 'mp3' | 'beep' | 'none',
+    halfTime: 'mp3' as 'mp3' | 'beep' | 'none',
+    oneMinute: 'mp3' as 'mp3' | 'beep' | 'none',
+    tenSeconds: 'mp3' as 'mp3' | 'beep' | 'none',
+    lastRound: 'mp3' as 'mp3' | 'beep' | 'none',
+    finished: 'mp3' as 'mp3' | 'beep' | 'none'
+  };
 
   stats = {
     miembros: 0,
@@ -675,17 +1036,28 @@ export class SettingsComponent implements OnInit {
     this.loadStats();
     this.loadAnamnesis();
 
-    // Cargar configuraciones de IA
+    // Cargar configuraciones de IA y sonido
     this.db.getConfiguraciones().subscribe({
       next: (configs) => {
         const providerConfig = configs.find(c => c.clave === 'ai_provider');
         const apiKeyConfig = configs.find(c => c.clave === 'gemini_api_key');
+        const apiKeyImagesConfig = configs.find(c => c.clave === 'gemini_api_key_images');
+        const soundConfig = configs.find(c => c.clave === 'timer_sound_config');
         
         this.aiProvider = (providerConfig?.valor as 'local' | 'gemini') || 'local';
         this.geminiApiKey = apiKeyConfig?.valor || '';
+        this.geminiApiKeyImages = apiKeyImagesConfig?.valor || '';
+        
+        if (soundConfig && soundConfig.valor) {
+          try {
+            this.timerSoundConfig = { ...this.timerSoundConfig, ...JSON.parse(soundConfig.valor) };
+          } catch (e) {
+            console.error('Error parsing timer sound config:', e);
+          }
+        }
         this.cdr.markForCheck();
       },
-      error: (err) => console.error('Error loading AI configurations', err)
+      error: (err) => console.error('Error loading configurations', err)
     });
   }
 
@@ -770,12 +1142,35 @@ export class SettingsComponent implements OnInit {
   }
 
   saveAiSettings() {
-    forkJoin({
+    const savePayload: any = {
       provider: this.db.saveConfiguracion('ai_provider', this.aiProvider),
       apiKey: this.db.saveConfiguracion('gemini_api_key', this.geminiApiKey.trim())
-    }).subscribe({
+    };
+
+    if (this.rootPasswordInput === 'root123') {
+      savePayload.apiKeyImages = this.db.saveConfiguracion('gemini_api_key_images', this.geminiApiKeyImages.trim());
+    }
+
+    forkJoin(savePayload).subscribe({
       next: () => {
-        alert('Configuración de IA guardada exitosamente.');
+        if (this.rootPasswordInput === 'root123') {
+          alert('Configuración de IA (incluyendo clave de imágenes) guardada exitosamente.');
+          this.rootPasswordInput = ''; // clear password input after saving
+        } else {
+          alert('Configuración de IA guardada exitosamente (la clave de imágenes no se modificó ya que requiere contraseña root).');
+        }
+      },
+      error: (err) => {
+        alert('Error al guardar la configuración: ' + (err.message || err));
+      }
+    });
+  }
+
+  saveTimerSettings() {
+    const configStr = JSON.stringify(this.timerSoundConfig);
+    this.db.saveConfiguracion('timer_sound_config', configStr).subscribe({
+      next: () => {
+        alert('Configuración de sonidos del cronómetro guardada exitosamente.');
       },
       error: (err) => {
         alert('Error al guardar la configuración: ' + (err.message || err));

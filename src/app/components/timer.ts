@@ -897,6 +897,24 @@ export class TimerComponent implements OnInit, OnDestroy {
   soundEnabled = true;
   isFullscreen = false;
   
+  // Audio state
+  private activeAudioElements: HTMLAudioElement[] = [];
+  timerSoundConfig = {
+    prep: 'mp3' as 'mp3' | 'beep' | 'none',
+    halfTime: 'mp3' as 'mp3' | 'beep' | 'none',
+    oneMinute: 'mp3' as 'mp3' | 'beep' | 'none',
+    tenSeconds: 'mp3' as 'mp3' | 'beep' | 'none',
+    lastRound: 'mp3' as 'mp3' | 'beep' | 'none',
+    finished: 'mp3' as 'mp3' | 'beep' | 'none'
+  };
+  
+  // Audio trigger flags
+  private playedCuenta = false;
+  private playedHalfTime = false;
+  private playedOneMinute = false;
+  private playedTenSeconds = false;
+  private playedLastRound = false;
+  
   // Timer States
   state: TimerState = 'setup';
   selectedMode: TimerMode = 'fortime';
@@ -958,6 +976,24 @@ export class TimerComponent implements OnInit, OnDestroy {
     this.wodDate = new Date(now.getTime() - tzOffset).toISOString().split('T')[0];
     
     this.loadWods();
+    this.loadSoundConfig();
+  }
+
+  loadSoundConfig(): void {
+    this.supabaseService.getConfiguraciones().subscribe({
+      next: (configs) => {
+        const soundConfig = configs.find(c => c.clave === 'timer_sound_config');
+        if (soundConfig && soundConfig.valor) {
+          try {
+            this.timerSoundConfig = { ...this.timerSoundConfig, ...JSON.parse(soundConfig.valor) };
+          } catch (e) {
+            console.error('Error parsing timer sound config:', e);
+          }
+        }
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Error loading sound configurations:', err)
+    });
   }
 
   ngOnDestroy(): void {
@@ -965,9 +1001,10 @@ export class TimerComponent implements OnInit, OnDestroy {
     if (this.audioCtx) {
       this.audioCtx.close();
     }
+    this.stopAllSounds();
   }
 
-  // --- AUDIO SYNTHESIS ---
+  // --- AUDIO SYNTHESIS & PLAYBACK ---
   private playBeep(frequency: number, durationMs: number): void {
     if (!this.soundEnabled) return;
     try {
@@ -998,8 +1035,61 @@ export class TimerComponent implements OnInit, OnDestroy {
     }
   }
 
+  private playSound(soundFile: string): HTMLAudioElement | null {
+    if (!this.soundEnabled) return null;
+    try {
+      const audio = new Audio(`sounds/${soundFile}`);
+      audio.volume = 0.5;
+      
+      audio.onended = () => {
+        this.activeAudioElements = this.activeAudioElements.filter(a => a !== audio);
+      };
+      
+      this.activeAudioElements.push(audio);
+      audio.play().catch(err => {
+        console.warn(`Error playing sound ${soundFile}:`, err);
+      });
+      return audio;
+    } catch (e) {
+      console.warn(`Audio playback not supported for ${soundFile}:`, e);
+      return null;
+    }
+  }
+
+  private pauseAllSounds(): void {
+    this.activeAudioElements.forEach(audio => {
+      try {
+        audio.pause();
+      } catch (e) {}
+    });
+  }
+
+  private resumeAllSounds(): void {
+    if (!this.soundEnabled) return;
+    this.activeAudioElements.forEach(audio => {
+      try {
+        audio.play().catch(() => {});
+      } catch (e) {}
+    });
+  }
+
+  private stopAllSounds(): void {
+    this.activeAudioElements.forEach(audio => {
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch (e) {}
+    });
+    this.activeAudioElements = [];
+  }
+
   toggleAudio(): void {
     this.soundEnabled = !this.soundEnabled;
+    if (!this.soundEnabled) {
+      this.pauseAllSounds();
+    } else {
+      this.resumeAllSounds();
+    }
     // Resume context if enabling
     if (this.soundEnabled) {
       if (!this.audioCtx) {
@@ -1112,6 +1202,14 @@ export class TimerComponent implements OnInit, OnDestroy {
   startTimer(): void {
     if (this.state !== 'setup') return;
 
+    // Reset sound flags and stop any active sounds
+    this.playedCuenta = false;
+    this.playedHalfTime = false;
+    this.playedOneMinute = false;
+    this.playedTenSeconds = false;
+    this.playedLastRound = false;
+    this.stopAllSounds();
+
     // Initialize counters
     this.currentRound = 1;
     this.currentCycle = 1;
@@ -1169,10 +1267,20 @@ export class TimerComponent implements OnInit, OnDestroy {
         this.updateDisplays(0);
       } else {
         const remainingSec = Math.ceil(remainingMs / 1000);
-        // Play count downs for 3, 2, 1 seconds left
-        if (remainingSec <= 3 && remainingSec !== this.lastTickedSecond) {
-          this.playBeep(880, 150);
-          this.lastTickedSecond = remainingSec;
+        const prepPref = this.timerSoundConfig.prep;
+        
+        // Custom Countdown Mp3 Trigger
+        if (prepPref === 'mp3') {
+          if (this.config.prepTime >= 10 && remainingMs <= 10000 && !this.playedCuenta) {
+            this.playedCuenta = true;
+            this.playSound('cuenta.mp3');
+          }
+        } else if (prepPref === 'beep') {
+          // Play count downs for 3, 2, 1 seconds left as beep
+          if (remainingSec <= 3 && remainingSec !== this.lastTickedSecond) {
+            this.playBeep(880, 150);
+            this.lastTickedSecond = remainingSec;
+          }
         }
         this.updateDisplays(totalElapsedMs);
       }
@@ -1182,6 +1290,64 @@ export class TimerComponent implements OnInit, OnDestroy {
     }
     
     this.cdr.detectChanges();
+  }
+
+  private getTotalWorkoutDurationMs(): number {
+    switch (this.selectedMode) {
+      case 'fortime':
+        return this.config.timeCapMinutes * 60 * 1000;
+      case 'amrap':
+        return this.config.amrapMinutes * 60 * 1000;
+      case 'emom':
+        return (this.config.emomIntervalMinutes * 60 + this.config.emomIntervalSeconds) * 1000 * this.config.emomRounds;
+      case 'tabata':
+        const workMs = this.config.tabataWorkSeconds * 1000;
+        const restMs = this.config.tabataRestSeconds * 1000;
+        const roundMs = workMs + restMs;
+        const cycleDurationMs = (roundMs * this.config.tabataRounds) - restMs;
+        const cycleRestMs = this.config.tabataCycleRestSeconds * 1000;
+        return (cycleDurationMs * this.config.tabataCycles) + (cycleRestMs * (this.config.tabataCycles - 1));
+      default:
+        return 0;
+    }
+  }
+
+  private checkGeneralTimeTriggers(elapsedMs: number, remainingMs: number, totalDurationMs: number): void {
+    // 1. Half Time
+    if (!this.playedHalfTime && elapsedMs >= totalDurationMs / 2) {
+      this.playedHalfTime = true;
+      const pref = this.timerSoundConfig.halfTime;
+      if (pref === 'mp3') {
+        this.playSound('half_time.mp3');
+      } else if (pref === 'beep') {
+        this.playBeep(1200, 300);
+      }
+    }
+
+    // 2. One Minute
+    if (!this.playedOneMinute && totalDurationMs >= 90000 && remainingMs <= 60000) {
+      this.playedOneMinute = true;
+      const pref = this.timerSoundConfig.oneMinute;
+      if (pref === 'mp3') {
+        this.playSound('one_minute.mp3');
+      } else if (pref === 'beep') {
+        this.playBeep(1200, 150);
+        setTimeout(() => this.playBeep(1200, 150), 200);
+      }
+    }
+
+    // 3. Ten Seconds
+    if (!this.playedTenSeconds && totalDurationMs >= 20000 && remainingMs <= 10000) {
+      this.playedTenSeconds = true;
+      const pref = this.timerSoundConfig.tenSeconds;
+      if (pref === 'mp3') {
+        this.playSound('ten_seconds.mp3');
+      } else if (pref === 'beep') {
+        this.playBeep(1200, 100);
+        setTimeout(() => this.playBeep(1200, 100), 150);
+        setTimeout(() => this.playBeep(1200, 100), 300);
+      }
+    }
   }
 
   private processActiveTimer(totalElapsedMs: number): void {
@@ -1195,6 +1361,8 @@ export class TimerComponent implements OnInit, OnDestroy {
       if (totalElapsedMs >= capMs) {
         this.finishTimer();
       } else {
+        const remainingMs = capMs - totalElapsedMs;
+        this.checkGeneralTimeTriggers(totalElapsedMs, remainingMs, capMs);
         this.updateDisplays(totalElapsedMs);
       }
       return;
@@ -1208,6 +1376,9 @@ export class TimerComponent implements OnInit, OnDestroy {
         this.finishTimer();
       } else {
         const remainingSec = Math.ceil(remainingMs / 1000);
+        // Spoken cues (one minute, ten seconds, half time)
+        this.checkGeneralTimeTriggers(totalElapsedMs, remainingMs, targetMs);
+        // Play final beep count downs for 3, 2, 1 seconds left
         if (remainingSec <= 3 && remainingSec !== this.lastTickedSecond) {
           this.playBeep(880, 150);
           this.lastTickedSecond = remainingSec;
@@ -1226,6 +1397,10 @@ export class TimerComponent implements OnInit, OnDestroy {
         return;
       }
 
+      // Spoken cues for the entire session
+      const remainingMs = totalSessionMs - totalElapsedMs;
+      this.checkGeneralTimeTriggers(totalElapsedMs, remainingMs, totalSessionMs);
+
       // Calculate current round
       const newRound = Math.floor(totalElapsedMs / intervalMs) + 1;
       const msInCurrentRound = totalElapsedMs % intervalMs;
@@ -1235,7 +1410,16 @@ export class TimerComponent implements OnInit, OnDestroy {
       // Check if new round started
       if (newRound !== this.currentRound) {
         this.currentRound = newRound;
-        this.playBeep(1760, 400); // Start of new round beep
+        if (this.currentRound === this.totalRounds) {
+          const pref = this.timerSoundConfig.lastRound;
+          if (pref === 'mp3') {
+            this.playSound('last_round.mp3');
+          } else if (pref === 'beep') {
+            this.playBeep(1760, 600);
+          }
+        } else {
+          this.playBeep(1760, 400); // Start of new round beep
+        }
       } else if (remainingInRoundSec <= 3 && remainingInRoundSec !== this.lastTickedSecond && remainingInRoundMs > 100) {
         this.playBeep(880, 120);
         this.lastTickedSecond = remainingInRoundSec;
@@ -1250,6 +1434,11 @@ export class TimerComponent implements OnInit, OnDestroy {
       const restMs = this.config.tabataRestSeconds * 1000;
       const cycleRestMs = this.config.tabataCycleRestSeconds * 1000;
       const roundMs = workMs + restMs;
+
+      // Spoken cues for the entire Tabata session
+      const totalSessionMs = this.getTotalWorkoutDurationMs();
+      const remainingMs = totalSessionMs - totalElapsedMs;
+      this.checkGeneralTimeTriggers(totalElapsedMs, remainingMs, totalSessionMs);
 
       // Calculate state inside the cycle
       const cycleElapsedMs = totalElapsedMs - this.getCycleOffsetMs();
@@ -1316,7 +1505,16 @@ export class TimerComponent implements OnInit, OnDestroy {
         this.lastTickedSecond = -1;
         
         if (newPhase === 'work') {
-          this.playBeep(1760, 450); // GO WORK!
+          if (this.currentRound === this.totalRounds && this.currentCycle === this.config.tabataCycles) {
+            const pref = this.timerSoundConfig.lastRound;
+            if (pref === 'mp3') {
+              this.playSound('last_round.mp3');
+            } else if (pref === 'beep') {
+              this.playBeep(1760, 600);
+            }
+          } else {
+            this.playBeep(1760, 450); // GO WORK!
+          }
         } else {
           this.playBeep(440, 400); // REST
         }
@@ -1354,10 +1552,15 @@ export class TimerComponent implements OnInit, OnDestroy {
     this.displayTime = '00:00';
     this.displayTenths = '0';
     
-    // Play final triumph sound: three long beeps
-    setTimeout(() => this.playBeep(1760, 300), 0);
-    setTimeout(() => this.playBeep(1760, 300), 400);
-    setTimeout(() => this.playBeep(2200, 700), 800);
+    const pref = this.timerSoundConfig.finished;
+    if (pref === 'mp3') {
+      this.playSound('well_done.mp3');
+    } else if (pref === 'beep') {
+      // Triumph sound: three long/medium beeps
+      setTimeout(() => this.playBeep(1760, 300), 0);
+      setTimeout(() => this.playBeep(1760, 300), 400);
+      setTimeout(() => this.playBeep(2200, 700), 800);
+    }
   }
 
   private updateDisplays(totalElapsedMs: number): void {
@@ -1448,6 +1651,7 @@ export class TimerComponent implements OnInit, OnDestroy {
       this.clearTimerInterval();
       this.timerInterval = setInterval(() => this.tick(), 100);
       this.playBeep(1760, 100);
+      this.resumeAllSounds();
     } else {
       // Pause
       this.isPaused = true;
@@ -1455,6 +1659,7 @@ export class TimerComponent implements OnInit, OnDestroy {
       this.elapsedOnPause += elapsedThisPeriod;
       this.clearTimerInterval();
       this.playBeep(440, 100);
+      this.pauseAllSounds();
     }
     this.cdr.detectChanges();
   }
@@ -1574,6 +1779,7 @@ export class TimerComponent implements OnInit, OnDestroy {
 
   resetToSetup(): void {
     this.clearTimerInterval();
+    this.stopAllSounds();
     this.state = 'setup';
     this.isPaused = true;
     this.laps = [];

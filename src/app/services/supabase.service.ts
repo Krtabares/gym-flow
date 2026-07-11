@@ -879,9 +879,13 @@ export class SupabaseService {
     if (this.isMockMode) {
       const provider = localStorage.getItem('gf_ai_provider') || 'local';
       const apiKey = localStorage.getItem('gf_gemini_api_key') || '';
+      const apiKeyImages = localStorage.getItem('gf_gemini_api_key_images') || '';
+      const soundConfig = localStorage.getItem('gf_timer_sound_config') || '{"prep":"mp3","halfTime":"mp3","oneMinute":"mp3","tenSeconds":"mp3","lastRound":"mp3","finished":"mp3"}';
       return of([
         { clave: 'ai_provider', valor: provider },
-        { clave: 'gemini_api_key', valor: apiKey }
+        { clave: 'gemini_api_key', valor: apiKey },
+        { clave: 'gemini_api_key_images', valor: apiKeyImages },
+        { clave: 'timer_sound_config', valor: soundConfig }
       ]);
     }
 
@@ -902,6 +906,10 @@ export class SupabaseService {
         localStorage.setItem('gf_ai_provider', valor);
       } else if (clave === 'gemini_api_key') {
         localStorage.setItem('gf_gemini_api_key', valor);
+      } else if (clave === 'gemini_api_key_images') {
+        localStorage.setItem('gf_gemini_api_key_images', valor);
+      } else if (clave === 'timer_sound_config') {
+        localStorage.setItem('gf_timer_sound_config', valor);
       }
       return of(true);
     }

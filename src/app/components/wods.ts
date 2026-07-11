@@ -162,7 +162,7 @@ import { WodParserService } from '../services/wod-parser.service';
               <span class="ai-sparkle">🤖</span>
               <div>
                 <h4>Asistente Inteligente de WODs</h4>
-                <p class="ai-subtitle">Pega tu entrenamiento en texto libre. Extraeremos ejercicios, repeticiones, tipo de WOD y notas.</p>
+                <p class="ai-subtitle">Pega tu entrenamiento en texto libre o sube una imagen de la pizarra. Extraeremos los ejercicios.</p>
               </div>
             </div>
 
@@ -175,18 +175,44 @@ import { WodParserService } from '../services/wod-parser.service';
               ></textarea>
             </div>
 
+            <!-- Carga de Imagen -->
+            <div class="ai-image-upload-section">
+              <label class="ai-image-upload-label" *ngIf="!aiSelectedImage">
+                <span class="upload-icon">📷</span>
+                <span class="upload-text">Subir imagen del WOD (pizarra, pantalla, etc.)</span>
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  class="hidden-file-input" 
+                  (change)="onAiImageSelected($event)"
+                />
+              </label>
+
+              <div class="ai-image-preview-container" *ngIf="aiSelectedImage">
+                <div class="image-preview-wrapper">
+                  <img [src]="'data:' + aiSelectedImage.mimeType + ';base64,' + aiSelectedImage.data" class="ai-image-preview" alt="Vista previa del WOD" />
+                  <div class="image-info">
+                    <span class="image-name">{{ aiSelectedImage.name }}</span>
+                  </div>
+                </div>
+                <button type="button" class="btn-remove-image" (click)="clearAiSelectedImage()" title="Eliminar imagen">✕</button>
+              </div>
+            </div>
+
             <div class="flex-between ai-actions">
               <span class="ai-provider-badge">
                 Motor: <strong>{{ getAiProviderLabel() }}</strong>
               </span>
-              <button type="button" class="btn btn-primary btn-sm" (click)="processTextWithAi()" [disabled]="isAiLoading || !aiInputText.trim()">
+              <button type="button" class="btn btn-primary btn-sm flex-align-center" (click)="processTextWithAi()" [disabled]="isAiLoading || (!aiInputText.trim() && !aiSelectedImage)">
+                <span class="btn-spinner" *ngIf="isAiLoading"></span>
                 <span>{{ isAiLoading ? 'Analizando...' : 'Procesar con IA' }}</span>
               </button>
             </div>
 
             <!-- Banner de Feedback -->
-            <div class="ai-feedback-banner mt-10" *ngIf="aiFeedbackMessage" [ngClass]="'banner-' + aiFeedbackType">
-              {{ aiFeedbackMessage }}
+            <div class="ai-feedback-banner mt-10 flex-align-center" *ngIf="aiFeedbackMessage" [ngClass]="'banner-' + aiFeedbackType">
+              <span class="btn-spinner" *ngIf="isAiLoading" style="border-top-color: currentColor; margin-right: 8px;"></span>
+              <span>{{ aiFeedbackMessage }}</span>
             </div>
           </div>
 
@@ -289,7 +315,8 @@ import { WodParserService } from '../services/wod-parser.service';
 
             <div class="flex-between form-actions preview-actions">
               <button type="button" class="btn btn-secondary" (click)="discardParsedBlocks()">Volver al Formulario</button>
-              <button type="button" class="btn btn-primary btn-save-all" (click)="saveAllParsedBlocks()" [disabled]="isAiLoading || parsedWodBlocks.length === 0">
+              <button type="button" class="btn btn-primary btn-save-all flex-align-center" (click)="saveAllParsedBlocks()" [disabled]="isAiLoading || parsedWodBlocks.length === 0">
+                <span class="btn-spinner" *ngIf="isAiLoading"></span>
                 <span>Guardar todos los bloques ({{ parsedWodBlocks.length }})</span>
               </button>
             </div>
@@ -1126,6 +1153,109 @@ import { WodParserService } from '../services/wod-parser.service';
       color: #ffd1d8;
     }
 
+    /* Helper utilities */
+    .flex-align-center {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* Loading Spinner Styles */
+    .btn-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Image Upload Section Styles */
+    .ai-image-upload-section {
+      margin-top: 6px;
+      margin-bottom: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .ai-image-upload-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      color: #a1a1aa;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+    }
+    .ai-image-upload-label:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .upload-icon {
+      font-size: 1.2rem;
+    }
+    .hidden-file-input {
+      display: none;
+    }
+    .ai-image-preview-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+    }
+    .image-preview-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ai-image-preview {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .image-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .image-name {
+      font-size: 0.82rem;
+      color: #e4e4e7;
+      font-weight: 600;
+      max-width: 250px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-remove-image {
+      background: transparent;
+      border: none;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: bold;
+      padding: 4px 8px;
+      transition: transform 0.15s;
+    }
+    .btn-remove-image:hover {
+      transform: scale(1.2);
+    }
+
     /* Multi-block preview styles */
     .parsed-blocks-preview {
       display: flex;
@@ -1441,6 +1571,7 @@ export class WodsComponent implements OnInit {
   // AI Creator Panel States
   showAiPanel = false;
   aiInputText = '';
+  aiSelectedImage: { data: string; mimeType: string; name: string } | null = null;
   isAiLoading = false;
   aiFeedbackMessage = '';
   aiFeedbackType: 'success' | 'warning' | 'error' = 'success';
@@ -1458,6 +1589,7 @@ export class WodsComponent implements OnInit {
   // AI Configuration
   aiProvider: 'local' | 'gemini' = 'local';
   geminiApiKey = '';
+  geminiApiKeyImages = '';
 
   ngOnInit() {
     this.selectedDate = this.getTodayDateStr();
@@ -1472,8 +1604,10 @@ export class WodsComponent implements OnInit {
       next: (configs) => {
         const providerConfig = configs.find(c => c.clave === 'ai_provider');
         const apiKeyConfig = configs.find(c => c.clave === 'gemini_api_key');
+        const apiKeyImagesConfig = configs.find(c => c.clave === 'gemini_api_key_images');
         this.aiProvider = (providerConfig?.valor as 'local' | 'gemini') || 'local';
         this.geminiApiKey = apiKeyConfig?.valor || '';
+        this.geminiApiKeyImages = apiKeyImagesConfig?.valor || '';
         this.cdr.markForCheck();
       },
       error: (err) => console.error('Error loading AI config in WodsComponent', err)
@@ -1581,6 +1715,7 @@ export class WodsComponent implements OnInit {
     this.wodFormEjercicios = [];
     this.exerciseSearchQuery = '';
     this.aiInputText = '';
+    this.aiSelectedImage = null;
     this.aiFeedbackMessage = '';
     this.showAiPanel = false;
     this.parsedWodBlocks = [];
@@ -1733,10 +1868,43 @@ export class WodsComponent implements OnInit {
     return this.aiProvider === 'gemini' ? 'Google Gemini API' : 'Analizador Local';
   }
 
+  onAiImageSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e: any) => {
+        const resultString = e.target.result as string;
+        const commaIndex = resultString.indexOf(',');
+        const base64Data = resultString.substring(commaIndex + 1);
+        
+        this.aiSelectedImage = {
+          data: base64Data,
+          mimeType: file.type,
+          name: file.name
+        };
+        
+        if (this.aiProvider === 'local') {
+          this.aiFeedbackMessage = 'Para procesar imágenes, se recomienda configurar Google Gemini en Ajustes.';
+          this.aiFeedbackType = 'warning';
+        } else {
+          this.aiFeedbackMessage = '';
+        }
+        this.cdr.markForCheck();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  clearAiSelectedImage() {
+    this.aiSelectedImage = null;
+    this.cdr.markForCheck();
+  }
+
   processTextWithAi() {
-    if (!this.aiInputText.trim()) return;
+    if (!this.aiInputText.trim() && !this.aiSelectedImage) return;
     this.isAiLoading = true;
-    this.aiFeedbackMessage = 'Analizando texto...';
+    this.aiFeedbackMessage = 'Analizando ' + (this.aiSelectedImage ? 'imagen y ' : '') + 'texto...';
     this.aiFeedbackType = 'success';
 
     const handleResult = (res: any) => {
@@ -1754,8 +1922,18 @@ export class WodsComponent implements OnInit {
       this.cdr.markForCheck();
     };
 
-    if (this.aiProvider === 'gemini' && this.geminiApiKey) {
-      this.parser.parseWithGemini(this.aiInputText, this.geminiApiKey, this.catalogEjercicios).subscribe({
+    if (this.aiProvider === 'gemini') {
+      // Usar la clave de imágenes si está configurada; de lo contrario, caer en la clave estándar como fallback
+      const activeApiKey = (this.aiSelectedImage && this.geminiApiKeyImages) ? this.geminiApiKeyImages : this.geminiApiKey;
+      if (!activeApiKey) {
+        this.aiFeedbackMessage = 'La clave API de Gemini no está configurada.';
+        this.aiFeedbackType = 'error';
+        this.isAiLoading = false;
+        this.cdr.markForCheck();
+        return;
+      }
+      const imagePayload = this.aiSelectedImage ? { data: this.aiSelectedImage.data, mimeType: this.aiSelectedImage.mimeType } : undefined;
+      this.parser.parseWithGemini(this.aiInputText, activeApiKey, this.catalogEjercicios, imagePayload).subscribe({
         next: (res) => handleResult(res),
         error: (err) => {
           console.error("Gemini API error, using local fallback", err);
@@ -1767,6 +1945,13 @@ export class WodsComponent implements OnInit {
         }
       });
     } else {
+      if (this.aiSelectedImage) {
+        this.aiFeedbackMessage = 'El análisis de imagen no está disponible con el Analizador Local. Cambia a Google Gemini en Ajustes.';
+        this.aiFeedbackType = 'error';
+        this.isAiLoading = false;
+        this.cdr.markForCheck();
+        return;
+      }
       const res = this.parser.parseWodText(this.aiInputText, this.catalogEjercicios);
       handleResult(res);
     }
@@ -1785,6 +1970,7 @@ export class WodsComponent implements OnInit {
   discardParsedBlocks() {
     this.parsedWodBlocks = [];
     this.aiFeedbackMessage = '';
+    this.aiSelectedImage = null;
     this.cdr.markForCheck();
   }
 

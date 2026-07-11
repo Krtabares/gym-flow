@@ -235,68 +235,82 @@ export class WodParserService {
    * PARSER POR API DE GEMINI: Envía el texto a Gemini API solicitando dividir el entrenamiento
    * en uno o más bloques independientes en formato JSON.
    */
-  parseWithGemini(text: string, apiKey: string, catalog: Ejercicio[]): Observable<{ bloques: ParsedWodResult[] }> {
+  parseWithGemini(text: string, apiKey: string, catalog: Ejercicio[], image?: { data: string; mimeType: string }): Observable<{ bloques: ParsedWodResult[] }> {
     const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
     const headers = {
       'Content-Type': 'application/json',
       'x-goog-api-key': apiKey
     };
 
-    const prompt = `Analiza el siguiente texto de entrenamiento completo y divídelo en uno o más bloques independientes (por ejemplo: Calentamiento, Fuerza, Metcon/Trabajo Final).
+    let prompt = `Analiza el siguiente entrenamiento y divídelo en uno o más bloques independientes (por ejemplo: Calentamiento, Fuerza, Metcon/Trabajo Final).
 Devuelve la respuesta estrictamente en formato JSON que contenga un arreglo de bloques ("bloques").
 
 Para cada bloque, identifica:
 - titulo: El nombre o título del bloque (ej. "Calentamiento", "Trabajo de Fuerza").
-- tipo: El tipo de WOD (elige estrictamente uno de los siguientes: "AMRAP", "EMOM", "EOMOM", "For Time", "RFT", "Chipper", "Tabata", "HIIT", "Death by", "Ladder", "MetCon", "Fuerza", "Complejo", "Halterofilia", "Gimnasia", "Calentamiento", "Partner WOD", "Otro").
-- descripcion: Descripción general del bloque (notas, calentamientos, intervalos, tempos).
+- tipo: El tipo de WOD. Debe ser exactamente una de estas opciones: "AMRAP", "EMOM", "EOMOM", "For Time", "RFT", "Chipper", "Tabata", "HIIT", "Death by", "Ladder", "MetCon", "Fuerza", "Complejo", "Halterofilia", "Gimnasia", "Calentamiento", "Partner WOD", "Otro". Si no estás seguro o no encaja, usa "Otro".
+- descripcion: Descripción general del bloque (notas, calentamientos, intervalos, tempos) o null/vacío si no hay.
 - ejercicios: Lista de ejercicios específicos del bloque.
 
 Para cada ejercicio, extrae:
 - nombre_ejercicio: El nombre del ejercicio en inglés o español.
-- series: Número de series si se especifica (ej. "4" en "4 series").
-- repeticiones: Repeticiones o esquema (ej. "10", "21-15-9", "400m", "15 cal").
-- detalles: Detalles de peso, ritmo, tempo o notas (ej. "RX 43/30 kg", "sosteniendo abajo 2\"", "(4\" x 1\" x 1\")").
+- series: Número entero de series si se especifica (ej. 4 en "4 series" o "4x10"). Debe ser estrictamente un número entero (integer) o null. Nunca incluyas texto como "sets" o "series".
+- repeticiones: Repeticiones o esquema (ej. "10", "21-15-9", "400m", "15 cal", "10/10") o null.
+- detalles: Detalles de peso, ritmo, tempo o notas (ej. "RX 43/30 kg", "sosteniendo abajo 2\"", "(4\" x 1\" x 1\")") o null.`;
 
-Texto del entrenamiento:
-"""
-${text}
-"""`;
+    if (image) {
+      prompt += `\n\nAnaliza la imagen adjunta que contiene la pizarra, pantalla o texto del entrenamiento para extraer esta información.`;
+      if (text) {
+        prompt += `\n\nTexto adicional o transcripción proporcionada por el usuario:\n"""\n${text}\n"""`;
+      }
+    } else {
+      prompt += `\n\nTexto del entrenamiento:\n"""\n${text}\n"""`;
+    }
+
+    const parts: any[] = [{ text: prompt }];
+    if (image) {
+      parts.push({
+        inlineData: {
+          mimeType: image.mimeType,
+          data: image.data
+        }
+      });
+    }
 
     const requestBody = {
       contents: [{
-        parts: [{ text: prompt }]
+        parts: parts
       }],
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: "OBJECT",
+          type: "object",
           properties: {
             bloques: {
-              type: "ARRAY",
+              type: "array",
               items: {
-                type: "OBJECT",
+                type: "object",
                 properties: {
-                  titulo: { type: "STRING" },
+                  titulo: { type: "string" },
                   tipo: { 
-                    type: "STRING", 
+                    type: "string", 
                     enum: ["AMRAP", "EMOM", "EOMOM", "For Time", "RFT", "Chipper", "Tabata", "HIIT", "Death by", "Ladder", "MetCon", "Fuerza", "Complejo", "Halterofilia", "Gimnasia", "Calentamiento", "Partner WOD", "Otro"] 
                   },
-                  descripcion: { type: "STRING" },
+                  descripcion: { type: "string", nullable: true },
                   ejercicios: {
-                    type: "ARRAY",
+                    type: "array",
                     items: {
-                      type: "OBJECT",
+                      type: "object",
                       properties: {
-                        nombre_ejercicio: { type: "STRING" },
-                        series: { type: "INTEGER" },
-                        repeticiones: { type: "STRING" },
-                        detalles: { type: "STRING" }
+                        nombre_ejercicio: { type: "string" },
+                        series: { type: "integer", nullable: true },
+                        repeticiones: { type: "string", nullable: true },
+                        detalles: { type: "string", nullable: true }
                       },
                       required: ["nombre_ejercicio"]
                     }
                   }
                 },
-                required: ["titulo", "tipo", "descripcion", "ejercicios"]
+                required: ["titulo", "tipo", "ejercicios"]
               }
             }
           },
@@ -308,7 +322,12 @@ ${text}
     return this.http.post<any>(url, requestBody, { headers }).pipe(
       map(res => {
         try {
-          const rawText = res.candidates[0].content.parts[0].text;
+          const candidate = res.candidates?.[0];
+          const rawText = candidate?.content?.parts?.[0]?.text;
+          if (!rawText) {
+            console.warn("No text content returned from Gemini API");
+            return this.parseWodText(text, catalog);
+          }
           const parsed = JSON.parse(rawText);
           const bloques: ParsedWodResult[] = [];
 
@@ -319,12 +338,19 @@ ${text}
               if (Array.isArray(bloque.ejercicios)) {
                 bloque.ejercicios.forEach((item: any, idx: number) => {
                   const matchedEx = this.findMatchingExercise(item.nombre_ejercicio, catalog);
+                  const seriesVal = (item.series !== undefined && item.series !== null) ? Number(item.series) : null;
+                  const repeticionesVal = (item.repeticiones !== undefined && item.repeticiones !== null) ? String(item.repeticiones) : null;
+                  const detallesVal = (item.detalles !== undefined && item.detalles !== null) ? String(item.detalles) : null;
+                  
+                  const isSeriesNaN = seriesVal !== null && isNaN(seriesVal);
+                  const parsedSeries = isSeriesNaN ? null : seriesVal;
+
                   if (matchedEx) {
                     exercisesMapped.push({
                       ejercicio_id: matchedEx.id,
-                      series: item.series || null,
-                      repeticiones: item.repeticiones ? String(item.repeticiones) : null,
-                      detalles: item.detalles || null,
+                      series: parsedSeries,
+                      repeticiones: repeticionesVal,
+                      detalles: detallesVal,
                       orden: idx,
                       matchedEjercicioName: matchedEx.nombre
                     });
@@ -333,9 +359,9 @@ ${text}
                     if (partialMatch) {
                       exercisesMapped.push({
                         ejercicio_id: partialMatch.id,
-                        series: item.series || null,
-                        repeticiones: item.repeticiones ? String(item.repeticiones) : null,
-                        detalles: item.detalles || null,
+                        series: parsedSeries,
+                        repeticiones: repeticionesVal,
+                        detalles: detallesVal,
                         orden: idx,
                         matchedEjercicioName: partialMatch.nombre
                       });
@@ -343,9 +369,9 @@ ${text}
                       // Guardar como ejercicio no coincidente para permitir registro/mapeo manual en la UI
                       exercisesMapped.push({
                         ejercicio_id: '',
-                        series: item.series || null,
-                        repeticiones: item.repeticiones ? String(item.repeticiones) : null,
-                        detalles: item.detalles || null,
+                        series: parsedSeries,
+                        repeticiones: repeticionesVal,
+                        detalles: detallesVal,
                         orden: idx,
                         matchedEjercicioName: item.nombre_ejercicio
                       });
