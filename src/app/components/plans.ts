@@ -29,9 +29,14 @@ import { Plan } from '../models';
             <span class="plan-duration">{{ p.duracion_dias }} días de acceso</span>
           </div>
 
-          <div class="plan-price-wrapper">
-            <span class="currency">$</span>
-            <span class="price-val">{{ p.precio }}</span>
+          <div class="plan-price-wrapper" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+            <div style="display: flex; align-items: baseline;">
+              <span class="currency">$</span>
+              <span class="price-val">{{ p.precio }}</span>
+            </div>
+            <div *ngIf="tasaCambio > 1" class="price-bs" style="font-size: 0.9rem; color: #a1a1aa; font-weight: 600;">
+              Bs. {{ (p.precio * tasaCambio).toFixed(2) }} <span style="font-size: 0.72rem; color: #71717a; font-weight: 500;">(Tasa: {{ tasaCambio }})</span>
+            </div>
           </div>
 
           <div class="plan-benefits">
@@ -290,6 +295,7 @@ export class PlansComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   planes: Plan[] = [];
+  tasaCambio = 1.0;
 
   // Modal controls
   showModal = false;
@@ -299,6 +305,10 @@ export class PlansComponent implements OnInit {
 
   ngOnInit() {
     this.loadData();
+    this.db.getTasaCambio().subscribe(tasa => {
+      this.tasaCambio = tasa;
+      this.cdr.markForCheck();
+    });
   }
 
   loadData() {

@@ -39,7 +39,12 @@ Chart.register(...registerables);
           <div class="metric-icon green-glow">💰</div>
           <div class="metric-info">
             <span class="metric-label">Ingreso Estimado</span>
-            <h2 class="metric-value">\${{ monthlyIncome }}</h2>
+            <h2 class="metric-value" style="display: flex; flex-direction: column; gap: 2px;">
+              <span>\${{ monthlyIncome }}</span>
+              <span *ngIf="tasaCambio > 1" style="font-size: 0.95rem; color: #a1a1aa; font-weight: 600;">
+                Bs. {{ (monthlyIncome * tasaCambio).toFixed(2) }}
+              </span>
+            </h2>
             <span class="metric-sub text-zinc">Mensual en suscripciones</span>
           </div>
         </div>
@@ -337,6 +342,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   recentAttendance: Asistencia[] = [];
   planes: Plan[] = [];
   miembros: Miembro[] = [];
+  tasaCambio = 1.0;
 
   ngOnInit() {
     this.loadData();
@@ -348,6 +354,10 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   }
 
   loadData() {
+    this.db.getTasaCambio().subscribe(tasa => {
+      this.tasaCambio = tasa;
+      this.cdr.markForCheck();
+    });
     this.db.getPlanes().subscribe(planes => {
       this.planes = planes;
       this.db.getMiembros().subscribe(miembros => {

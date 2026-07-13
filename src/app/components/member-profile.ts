@@ -98,7 +98,12 @@ import { Miembro, Pago, Asistencia, MarcaMiembro } from '../models';
               </div>
               <div class="detail-item">
                 <span class="detail-label">Precio</span>
-                <span class="detail-value font-bold">\${{ member.plan.precio }}</span>
+                <span class="detail-value font-bold">
+                  \${{ member.plan.precio }}
+                  <span *ngIf="tasaCambio > 1" style="font-size: 0.85rem; color: #a1a1aa; font-weight: 600;">
+                    (Bs. {{ (member.plan.precio * tasaCambio).toFixed(2) }})
+                  </span>
+                </span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Duración del Plan</span>
@@ -232,7 +237,12 @@ import { Miembro, Pago, Asistencia, MarcaMiembro } from '../models';
                 <tbody>
                   <tr *ngFor="let p of payments">
                     <td>{{ formatDate(p.fecha_pago) }}</td>
-                    <td class="payment-amount">\${{ p.monto }}</td>
+                    <td class="payment-amount">
+                      <div>\${{ p.monto }}</div>
+                      <div *ngIf="(p.tasa_cambio || tasaCambio) > 1" style="font-size: 0.75rem; color: #a1a1aa; font-weight: 500;">
+                        Bs. {{ (p.monto * (p.tasa_cambio || tasaCambio)).toFixed(2) }}
+                      </div>
+                    </td>
                     <td>{{ p.metodo_pago }}</td>
                     <td>
                       <span class="badge badge-active" style="font-size: 9px; padding: 2px 6px;">{{ p.estado }}</span>
@@ -698,8 +708,13 @@ export class MemberProfileComponent implements OnInit {
   scores: MarcaMiembro[] = [];
   loading = true;
   error = '';
+  tasaCambio = 1.0;
 
   ngOnInit() {
+    this.db.getTasaCambio().subscribe(tasa => {
+      this.tasaCambio = tasa;
+      this.cdr.markForCheck();
+    });
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.loadMemberData(id);

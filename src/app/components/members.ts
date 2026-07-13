@@ -99,6 +99,9 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
                   <div class="plan-info" *ngIf="m.plan; else noPlan">
                     <span class="plan-name">{{ m.plan.nombre }}</span>
                     <span class="plan-price">\${{ m.plan.precio }}</span>
+                    <span *ngIf="tasaCambio > 1" class="plan-price-bs" style="font-size: 0.72rem; color: #a1a1aa; font-weight: 500;">
+                      Bs. {{ (m.plan.precio * tasaCambio).toFixed(2) }}
+                    </span>
                   </div>
                   <ng-template #noPlan><span class="text-muted">Ninguno</span></ng-template>
                 </td>
@@ -168,7 +171,12 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
               <div class="plan-details mt-8 flex-between">
                 <div class="plan-info" *ngIf="m.plan; else noMobilePlan">
                   <span class="plan-name" style="font-weight: 700; color: var(--primary);">{{ m.plan.nombre }}</span>
-                  <span class="plan-price text-muted">\${{ m.plan.precio }}</span>
+                  <span class="plan-price text-muted">
+                    \${{ m.plan.precio }}
+                    <span *ngIf="tasaCambio > 1" style="font-size: 0.72rem; color: #a1a1aa;">
+                      (Bs. {{ (m.plan.precio * tasaCambio).toFixed(2) }})
+                    </span>
+                  </span>
                 </div>
                 <ng-template #noMobilePlan><span class="text-muted">Sin Plan</span></ng-template>
                 
@@ -254,7 +262,9 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
                 <label class="form-label">Plan de Suscripción</label>
                 <select class="form-control" name="plan_id" [(ngModel)]="memberForm.plan_id" (change)="onPlanChange()">
                   <option [value]="null">Sin Plan / Inactivo</option>
-                  <option *ngFor="let p of planes" [value]="p.id">{{ p.nombre }} - \${{ p.precio }} ({{ p.duracion_dias }} días)</option>
+                  <option *ngFor="let p of planes" [value]="p.id">
+                    {{ p.nombre }} - \${{ p.precio }} {{ tasaCambio > 1 ? '/ Bs. ' + (p.precio * tasaCambio).toFixed(2) : '' }} ({{ p.duracion_dias }} días)
+                  </option>
                 </select>
               </div>
               
@@ -310,13 +320,40 @@ import { Miembro, Plan, PreguntaAnamnesis, RespuestaAnamnesis, AnamnesisMiembro 
             <p class="summary-value text-cyan">{{ activePaymentMember?.plan?.nombre }}</p>
 
             <p class="summary-label mt-12">Monto a Pagar</p>
-            <p class="summary-amount">\${{ activePaymentMember?.plan?.precio }}</p>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span class="summary-amount">\${{ activePaymentMember?.plan?.precio }}</span>
+              <span *ngIf="tasaCambio > 1 && activePaymentMember?.plan" style="font-size: 1.1rem; color: #a1a1aa; font-weight: 700; font-family: var(--font-display);">
+                Bs. {{ (activePaymentMember.plan.precio * (paymentForm.tasa_pago || 1.0)).toFixed(2) }}
+              </span>
+            </div>
           </div>
 
           <form (submit)="recordPayment()">
             <div class="form-group">
               <label class="form-label">Fecha de Pago</label>
-              <input type="date" class="form-control" name="fecha_pago" [(ngModel)]="paymentForm.fecha_pago" required>
+              <input type="date" class="form-control" name="fecha_pago" [(ngModel)]="paymentForm.fecha_pago" (ngModelChange)="onPaymentDateChange()" required>
+            </div>
+
+            <div class="form-group" *ngIf="tasaCambio > 1">
+              <label class="form-label">Tasa de Cambio (Bs.)</label>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  name="tasa_pago" 
+                  [(ngModel)]="paymentForm.tasa_pago" 
+                  [disabled]="isPaymentDateToday()"
+                  step="0.01"
+                  min="1"
+                  placeholder="Ej. 45.00 o dejar libre"
+                >
+                <span class="info-note" *ngIf="isPaymentDateToday()">
+                  Fijada automáticamente a la tasa de hoy ({{ tasaCambio }}).
+                </span>
+                <span class="info-note" *ngIf="!isPaymentDateToday()">
+                  Puedes modificar la tasa para esta fecha anterior, o dejarla libre (1.0).
+                </span>
+              </div>
             </div>
 
             <div class="form-group">
@@ -856,6 +893,7 @@ export class MembersComponent implements OnInit {
   members: Miembro[] = [];
   filteredMembers: Miembro[] = [];
   planes: Plan[] = [];
+  tasaCambio = 1.0;
 
   // Filters
   searchQuery = '';
@@ -871,7 +909,8 @@ export class MembersComponent implements OnInit {
   activePaymentMember: Miembro | null = null;
   paymentForm = {
     metodo_pago: 'Efectivo',
-    fecha_pago: ''
+    fecha_pago: '',
+    tasa_pago: 1.0
   };
 
   // Anamnesis logic variables
@@ -889,6 +928,10 @@ export class MembersComponent implements OnInit {
   }
 
   loadData() {
+    this.db.getTasaCambio().subscribe(tasa => {
+      this.tasaCambio = tasa;
+      this.cdr.markForCheck();
+    });
     this.db.getPlanes().subscribe(planes => {
       this.planes = planes;
       this.db.getMiembros().subscribe(miembros => {
@@ -1026,7 +1069,8 @@ export class MembersComponent implements OnInit {
     this.activePaymentMember = member;
     this.paymentForm = { 
       metodo_pago: 'Efectivo',
-      fecha_pago: new Date().toISOString().split('T')[0]
+      fecha_pago: new Date().toISOString().split('T')[0],
+      tasa_pago: this.tasaCambio
     };
     this.showPaymentModal = true;
   }
@@ -1034,6 +1078,18 @@ export class MembersComponent implements OnInit {
   closePaymentModal() {
     this.showPaymentModal = false;
     this.activePaymentMember = null;
+  }
+
+  isPaymentDateToday(): boolean {
+    if (!this.paymentForm.fecha_pago) return true;
+    const todayStr = new Date().toISOString().split('T')[0];
+    return this.paymentForm.fecha_pago === todayStr;
+  }
+
+  onPaymentDateChange() {
+    if (this.isPaymentDateToday()) {
+      this.paymentForm.tasa_pago = this.tasaCambio;
+    }
   }
 
   recordPayment() {
@@ -1048,6 +1104,7 @@ export class MembersComponent implements OnInit {
       monto: this.activePaymentMember.plan.precio,
       metodo_pago: this.paymentForm.metodo_pago,
       fecha_pago: paymentDateTime,
+      tasa_cambio: this.isPaymentDateToday() ? this.tasaCambio : (this.paymentForm.tasa_pago || 1.0),
       estado: 'completado'
     };
 

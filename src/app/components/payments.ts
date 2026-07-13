@@ -55,7 +55,10 @@ import { Pago } from '../models';
                   </div>
                 </td>
                 <td>
-                  <span class="payment-amount">\${{ p.monto }}</span>
+                  <div class="payment-amount">\${{ p.monto }}</div>
+                  <div *ngIf="(p.tasa_cambio || tasaCambio) > 1" style="font-size: 0.75rem; color: #a1a1aa; font-weight: 500;">
+                    Bs. {{ (p.monto * (p.tasa_cambio || tasaCambio)).toFixed(2) }}
+                  </div>
                 </td>
                 <td>
                   <span>{{ formatDateTime(p.fecha_pago) }}</span>
@@ -95,9 +98,14 @@ import { Pago } from '../models';
                   {{ p.miembro?.nombre || 'Miembro Eliminado' }}
                 </span>
               </div>
-              <span class="payment-amount" style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">
-                \${{ p.monto }}
-              </span>
+              <div class="payment-amount-col text-right" style="display: flex; flex-direction: column; align-items: flex-end;">
+                <span class="payment-amount" style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">
+                  \${{ p.monto }}
+                </span>
+                <span *ngIf="(p.tasa_cambio || tasaCambio) > 1" style="font-size: 0.78rem; color: #a1a1aa; font-weight: 600; margin-top: 2px;">
+                  Bs. {{ (p.monto * (p.tasa_cambio || tasaCambio)).toFixed(2) }}
+                </span>
+              </div>
             </div>
 
             <div class="card-footer-row mt-12">
@@ -145,6 +153,10 @@ import { Pago } from '../models';
                 <span class="label">Método de Pago:</span>
                 <span class="val">{{ selectedPago.metodo_pago }}</span>
               </div>
+              <div class="row" *ngIf="(selectedPago.tasa_cambio || tasaCambio) > 1">
+                <span class="label">Tasa de Cambio:</span>
+                <span class="val">{{ selectedPago.tasa_cambio || tasaCambio }} Bs.</span>
+              </div>
             </div>
 
             <div class="divider"></div>
@@ -168,9 +180,14 @@ import { Pago } from '../models';
             <div class="divider"></div>
 
             <div class="receipt-section amount-summary">
-              <div class="flex-between">
-                <span class="total-label">TOTAL NETO:</span>
-                <span class="total-val">\${{ selectedPago.monto }}</span>
+              <div class="flex-between" style="align-items: flex-start;">
+                <span class="total-label" style="margin-top: 6px;">TOTAL NETO:</span>
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                  <span class="total-val">\${{ selectedPago.monto }}</span>
+                  <span *ngIf="(selectedPago.tasa_cambio || tasaCambio) > 1" style="font-size: 1.15rem; color: #a1a1aa; font-weight: 700; font-family: var(--font-display);">
+                    Bs. {{ (selectedPago.monto * (selectedPago.tasa_cambio || tasaCambio)).toFixed(2) }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -390,6 +407,7 @@ export class PaymentsComponent implements OnInit {
   payments: Pago[] = [];
   filteredPayments: Pago[] = [];
   searchQuery = '';
+  tasaCambio = 1.0;
 
   // Modal control
   showReceiptModal = false;
@@ -400,6 +418,10 @@ export class PaymentsComponent implements OnInit {
   }
 
   loadData() {
+    this.db.getTasaCambio().subscribe(tasa => {
+      this.tasaCambio = tasa;
+      this.cdr.markForCheck();
+    });
     this.db.getPagos().subscribe(payments => {
       this.payments = payments;
       this.filterPayments();

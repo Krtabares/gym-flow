@@ -417,7 +417,8 @@ export class SupabaseService {
           descripcion: 'El clásico Hero WOD en memoria del teniente Michael P. Murphy. Partición libre de flexiones, dominadas y sentadillas.',
           tipo: 'For Time',
           fecha: this.getDateOffset(0),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          orden: 1
         },
         {
           id: 'w2',
@@ -425,7 +426,8 @@ export class SupabaseService {
           descripcion: 'Mantener un ritmo constante en la carrera y acelerar en los burpees.',
           tipo: 'AMRAP',
           fecha: this.getDateOffset(-1),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          orden: 1
         },
         {
           id: 'w3',
@@ -433,7 +435,8 @@ export class SupabaseService {
           descripcion: 'Tabata / HIIT metabólico de intervalos de alta intensidad.',
           tipo: 'HIIT',
           fecha: this.getDateOffset(1),
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          orden: 1
         }
       ];
       localStorage.setItem('gf_wods', JSON.stringify(mockWods));
@@ -881,11 +884,13 @@ export class SupabaseService {
       const apiKey = localStorage.getItem('gf_gemini_api_key') || '';
       const apiKeyImages = localStorage.getItem('gf_gemini_api_key_images') || '';
       const soundConfig = localStorage.getItem('gf_timer_sound_config') || '{"prep":"mp3","halfTime":"mp3","oneMinute":"mp3","tenSeconds":"mp3","lastRound":"mp3","finished":"mp3"}';
+      const tasaCambio = localStorage.getItem('gf_tasa_cambio') || '1.0';
       return of([
         { clave: 'ai_provider', valor: provider },
         { clave: 'gemini_api_key', valor: apiKey },
         { clave: 'gemini_api_key_images', valor: apiKeyImages },
-        { clave: 'timer_sound_config', valor: soundConfig }
+        { clave: 'timer_sound_config', valor: soundConfig },
+        { clave: 'tasa_cambio', valor: tasaCambio }
       ]);
     }
 
@@ -910,6 +915,8 @@ export class SupabaseService {
         localStorage.setItem('gf_gemini_api_key_images', valor);
       } else if (clave === 'timer_sound_config') {
         localStorage.setItem('gf_timer_sound_config', valor);
+      } else if (clave === 'tasa_cambio') {
+        localStorage.setItem('gf_tasa_cambio', valor);
       }
       return of(true);
     }
@@ -922,6 +929,15 @@ export class SupabaseService {
         return true;
       }),
       catchError(err => throwError(() => err))
+    );
+  }
+
+  getTasaCambio(): Observable<number> {
+    return this.getConfiguraciones().pipe(
+      map(configs => {
+        const tasa = configs.find(c => c.clave === 'tasa_cambio');
+        return parseFloat(tasa?.valor || '1.0') || 1.0;
+      })
     );
   }
 
@@ -1033,7 +1049,7 @@ export class SupabaseService {
           ...w,
           wod_ejercicios: matchingEjercicios
         };
-      });
+      }).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999));
 
       return of(populated);
     }
@@ -1044,7 +1060,7 @@ export class SupabaseService {
         *,
         ejercicio:ejercicios (*)
       )
-    `);
+    `).order('orden', { ascending: true });
 
     if (fecha) {
       query = query.eq('fecha', fecha);

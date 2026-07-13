@@ -50,6 +50,7 @@ export interface Pago {
   fecha_pago: string;
   metodo_pago: string;
   estado: string;
+  tasa_cambio?: number;
   created_at?: string;
   miembro?: Miembro;
 }
@@ -152,6 +153,7 @@ export interface Wod {
   fecha: string; // YYYY-MM-DD
   wod_ejercicios?: WodEjercicio[];
   created_at?: string;
+  orden?: number;
 }
 
 export interface Usuario {

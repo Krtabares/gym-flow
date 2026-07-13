@@ -37,6 +37,10 @@ import { environment } from '../../environments/environment';
           <span class="tab-icon">⏱️</span>
           <span>Cronómetro & Sonidos</span>
         </button>
+        <button class="tab-btn" [class.active]="activeTab === 'currency'" (click)="activeTab = 'currency'">
+          <span class="tab-icon">💸</span>
+          <span>Moneda & Tasa Bs.</span>
+        </button>
       </div>
 
       <!-- Contenido de Pestaña: Base de Datos -->
@@ -477,6 +481,52 @@ import { environment } from '../../environments/environment';
             <div class="form-actions mt-24">
               <button type="submit" class="btn btn-primary">
                 <span>Guardar Configuración de Sonido</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Contenido de Pestaña: Moneda & Tasa -->
+      <div class="tab-content animate-fade-in" *ngIf="activeTab === 'currency'">
+        <div class="glass-card currency-settings-card" style="max-width: 600px;">
+          <h3>Configuración de Moneda y Tasa de Cambio</h3>
+          <p class="desc">Define la tasa de cambio oficial (USD a Bs.) para mostrar automáticamente los precios en Bolívares.</p>
+
+          <form (submit)="$event.preventDefault(); saveCurrencySettings()">
+            <div class="form-group mt-20">
+              <label class="form-label">Tasa de Cambio (1 USD = X Bs.)</label>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  name="tasaCambio"
+                  [(ngModel)]="tasaCambio" 
+                  placeholder="Ej. 45.50"
+                  step="0.01"
+                  min="1"
+                  required
+                  style="flex-grow: 1;"
+                >
+                <button type="button" class="btn btn-secondary" [disabled]="isFetchingRate" (click)="fetchExternalRate('oficial')">
+                  <span>{{ isFetchingRate ? 'Consultando...' : 'Consultar BCV' }}</span>
+                </button>
+                <button type="button" class="btn btn-secondary" [disabled]="isFetchingRate" (click)="fetchExternalRate('paralelo')">
+                  <span>{{ isFetchingRate ? 'Consultando...' : 'Consultar Paralelo' }}</span>
+                </button>
+              </div>
+            </div>
+            
+            <div class="tip-box mt-10">
+              <span class="info-icon">💡</span>
+              <p class="tip-text-block">
+                Cuando la tasa de cambio es mayor a 1.0, el sistema mostrará automáticamente la conversión a Bolívares (Bs.) al lado de los montos en dólares en el panel de control, directorio de miembros, planes y pagos.
+              </p>
+            </div>
+
+            <div class="form-actions mt-24">
+              <button type="submit" class="btn btn-primary">
+                <span>Guardar Configuración de Tasa</span>
               </button>
             </div>
           </form>
@@ -978,11 +1028,15 @@ export class SettingsComponent implements OnInit {
   private db = inject(SupabaseService);
   private cdr = inject(ChangeDetectorRef);
 
-  activeTab: 'database' | 'anamnesis' | 'ai' | 'timer' = 'database';
+  activeTab: 'database' | 'anamnesis' | 'ai' | 'timer' | 'currency' = 'database';
   isMockMode = true;
   supabaseUrl = '';
   supabaseKey = '';
   maskedKey = 'No configurada';
+
+  // Currency & Rate Configuration
+  tasaCambio = 1.0;
+  isFetchingRate = false;
 
   // AI Configurations
   aiProvider: 'local' | 'gemini' = 'local';
@@ -1043,10 +1097,12 @@ export class SettingsComponent implements OnInit {
         const apiKeyConfig = configs.find(c => c.clave === 'gemini_api_key');
         const apiKeyImagesConfig = configs.find(c => c.clave === 'gemini_api_key_images');
         const soundConfig = configs.find(c => c.clave === 'timer_sound_config');
+        const tasaConfig = configs.find(c => c.clave === 'tasa_cambio');
         
         this.aiProvider = (providerConfig?.valor as 'local' | 'gemini') || 'local';
         this.geminiApiKey = apiKeyConfig?.valor || '';
         this.geminiApiKeyImages = apiKeyImagesConfig?.valor || '';
+        this.tasaCambio = parseFloat(tasaConfig?.valor || '1.0') || 1.0;
         
         if (soundConfig && soundConfig.valor) {
           try {
@@ -1174,6 +1230,47 @@ export class SettingsComponent implements OnInit {
       },
       error: (err) => {
         alert('Error al guardar la configuración: ' + (err.message || err));
+      }
+    });
+  }
+
+  fetchExternalRate(tipo: 'oficial' | 'paralelo') {
+    this.isFetchingRate = true;
+    this.cdr.markForCheck();
+    fetch(`https://ve.dolarapi.com/v1/dolares/${tipo}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Error al consultar la tasa');
+        return res.json();
+      })
+      .then(data => {
+        if (data && typeof data.promedio === 'number') {
+          this.tasaCambio = parseFloat(data.promedio.toFixed(2));
+          alert(`Tasa ${tipo === 'oficial' ? 'oficial del BCV' : 'paralela'} obtenida con éxito: ${this.tasaCambio} Bs.`);
+        } else {
+          throw new Error('Formato de respuesta no válido');
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching rate:', err);
+        alert('No se pudo obtener la tasa automáticamente. Intenta de nuevo o ingrésala manualmente.');
+      })
+      .finally(() => {
+        this.isFetchingRate = false;
+        this.cdr.markForCheck();
+      });
+  }
+
+  saveCurrencySettings() {
+    if (this.tasaCambio < 1) {
+      alert('La tasa de cambio no puede ser menor a 1.0.');
+      return;
+    }
+    this.db.saveConfiguracion('tasa_cambio', this.tasaCambio.toString()).subscribe({
+      next: () => {
+        alert('Tasa de cambio guardada exitosamente.');
+      },
+      error: (err) => {
+        alert('Error al guardar la tasa de cambio: ' + (err.message || err));
       }
     });
   }

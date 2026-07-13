@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS pagos (
     fecha_pago TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
     metodo_pago TEXT NOT NULL,
     estado TEXT DEFAULT 'completado' NOT NULL,
+    tasa_cambio NUMERIC DEFAULT 1.0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -106,5 +107,6 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO configuracion (clave, valor) VALUES
 ('gemini_api_key', ''),
 ('gemini_api_key_images', ''),
-('ai_provider', 'local')
+('ai_provider', 'local'),
+('tasa_cambio', '1.0')
 ON CONFLICT (clave) DO NOTHING;

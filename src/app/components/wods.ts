@@ -62,9 +62,12 @@ import { WodParserService } from '../services/wod-parser.service';
 
       <!-- WODS DISPLAY SECTION -->
       <div class="wods-display-grid" *ngIf="wods.length > 0; else noWods">
-        <div class="glass-card wod-detail-card" *ngFor="let wod of wods">
+        <div class="glass-card wod-detail-card" [ngClass]="getWodTypeClass(wod.tipo)" *ngFor="let wod of wods">
           <div class="wod-card-header flex-between">
             <div class="wod-title-wrapper">
+              <span class="part-indicator-badge" *ngIf="wod.orden">
+                {{ getWodOrderLabel(wod.orden) }}
+              </span>
               <span class="badge badge-wod-type" [ngClass]="getWodTypeClass(wod.tipo)">
                 {{ wod.tipo }}
               </span>
@@ -82,18 +85,9 @@ import { WodParserService } from '../services/wod-parser.service';
           </div>
 
           <div class="wod-card-body">
-            <!-- Timer Suggestion -->
-            <div class="timer-info-alert">
-              <span class="timer-icon">⏱️</span>
-              <div>
-                <strong>Cronómetro Sugerido:</strong> 
-                <span class="timer-method">{{ getTimerMethodLabel(wod.tipo) }}</span>
-              </div>
-            </div>
-
             <!-- General Description -->
             <div class="wod-desc-section" *ngIf="wod.descripcion">
-              <h4>Instrucciones y Calentamiento</h4>
+              <h4>Instrucciones</h4>
               <p class="description-text">{{ wod.descripcion }}</p>
             </div>
 
@@ -101,25 +95,23 @@ import { WodParserService } from '../services/wod-parser.service';
             <div class="wod-exercises-section">
               <h4>Ejercicios Programados</h4>
               <div class="exercises-list-table" *ngIf="wod.wod_ejercicios && wod.wod_ejercicios.length > 0; else noExercisesInWod">
-                <div class="exercise-item-row" *ngFor="let we of wod.wod_ejercicios; let i = index">
+                <div class="exercise-item-row" *ngFor="let we of wod.wod_ejercicios; let i = index"
+                     (click)="toggleExerciseExpand(wod.id, i)"
+                     [class.is-expanded]="isExerciseExpanded(wod.id, i)">
                   <span class="exercise-order">{{ i + 1 }}</span>
-                  <div class="exercise-main-info">
-                    <span class="exercise-name">{{ we.ejercicio?.nombre || 'Ejercicio Eliminado' }}</span>
-                    <span class="exercise-category-badge" [ngClass]="getCategoryBadgeClass(we.ejercicio?.categoria)">
-                      {{ we.ejercicio?.categoria || 'Desconocido' }}
-                    </span>
-                  </div>
-                  
-                  <div class="exercise-specs">
-                    <span class="spec-series" *ngIf="we.series">
-                      <strong>{{ we.series }}</strong> series
-                    </span>
-                    <span class="spec-reps" *ngIf="we.repeticiones">
-                      <strong>{{ we.repeticiones }}</strong> reps
-                    </span>
-                    <span class="spec-details" *ngIf="we.detalles">
-                      💬 {{ we.detalles }}
-                    </span>
+                  <div class="exercise-content-wrap">
+                    <span class="exercise-name">{{ we.ejercicio ? (we.ejercicio.nombre?.trim() ? we.ejercicio.nombre : 'Ejercicio sin nombre') : 'Ejercicio Eliminado' }}</span>
+                    
+                    <div class="exercise-specs-inline">
+                      <div class="spec-formula-pill" *ngIf="we.series || we.repeticiones">
+                        <span class="spec-series-val" *ngIf="we.series"><strong>{{ we.series }}</strong> series</span>
+                        <span class="spec-multiplier" *ngIf="we.series && we.repeticiones">×</span>
+                        <span class="spec-reps-val" *ngIf="we.repeticiones"><strong>{{ we.repeticiones }}</strong></span>
+                      </div>
+                      <span class="spec-details-text" *ngIf="we.detalles">
+                        💬 {{ we.detalles }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -359,7 +351,7 @@ import { WodParserService } from '../services/wod-parser.service';
           </div>
 
           <form *ngIf="parsedWodBlocks.length === 0 || isEditMode" (submit)="$event.preventDefault(); saveWod()">
-            <div class="form-grid">
+            <div class="form-grid-three">
               <div class="form-group">
                 <label class="form-label">Título del WOD</label>
                 <input 
@@ -379,6 +371,18 @@ import { WodParserService } from '../services/wod-parser.service';
                   class="form-control" 
                   name="fecha" 
                   [(ngModel)]="wodForm.fecha" 
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Posición (Orden)</label>
+                <input 
+                  type="number" 
+                  class="form-control" 
+                  name="orden" 
+                  [(ngModel)]="wodForm.orden" 
+                  min="1" 
                   required
                 >
               </div>
@@ -598,18 +602,18 @@ import { WodParserService } from '../services/wod-parser.service';
     .wods-container {
       display: flex;
       flex-direction: column;
-      gap: 28px;
+      gap: 16px;
     }
     .title-grad {
-      font-size: 2.2rem;
+      font-size: 1.8rem;
       background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
     .subtitle {
       color: #71717a;
-      font-size: 0.92rem;
+      font-size: 0.88rem;
     }
 
     /* Date scheduler */
@@ -617,20 +621,20 @@ import { WodParserService } from '../services/wod-parser.service';
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
-      padding: 30px;
+      gap: 12px;
+      padding: 16px;
     }
     .date-controls {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: 14px;
     }
     .nav-date-btn {
-      width: 44px;
-      height: 44px;
+      width: 36px;
+      height: 36px;
       padding: 0;
       border-radius: 50%;
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -648,21 +652,21 @@ import { WodParserService } from '../services/wod-parser.service';
     }
     .calendar-icon {
       position: absolute;
-      left: 16px;
-      font-size: 1.15rem;
+      left: 14px;
+      font-size: 1rem;
       pointer-events: none;
       color: #a1a1aa;
     }
     .date-picker-input {
-      padding-left: 48px;
-      font-size: 1.05rem;
+      padding-left: 40px;
+      font-size: 0.95rem;
       font-weight: 600;
-      width: 240px;
+      width: 200px;
       color: #fff;
       text-align: center;
       background: rgba(0, 0, 0, 0.5);
       border: 1px solid var(--border-glow);
-      height: 45px;
+      height: 38px;
     }
     .date-picker-input::-webkit-calendar-picker-indicator {
       filter: invert(1);
@@ -674,15 +678,15 @@ import { WodParserService } from '../services/wod-parser.service';
     .week-strip {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 12px;
+      gap: 8px;
       width: 100%;
-      max-width: 820px;
+      max-width: 720px;
     }
     .strip-day-btn {
       background: rgba(255, 255, 255, 0.02);
       border: 1px solid var(--border-glow);
-      border-radius: var(--radius-md);
-      padding: 14px 8px;
+      border-radius: var(--radius-sm);
+      padding: 8px 4px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -699,23 +703,23 @@ import { WodParserService } from '../services/wod-parser.service';
       background: rgba(0, 255, 136, 0.08);
       border-color: var(--primary);
       color: #fff;
-      box-shadow: 0 0 16px rgba(0, 255, 136, 0.2);
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.15);
     }
     .strip-day-btn .day-name {
-      font-size: 0.72rem;
+      font-size: 0.65rem;
       font-weight: 600;
       text-transform: uppercase;
       opacity: 0.8;
       letter-spacing: 0.06em;
     }
     .strip-day-btn .day-number {
-      font-size: 1.4rem;
+      font-size: 1.15rem;
       font-weight: 800;
-      margin: 4px 0;
+      margin: 2px 0;
       font-family: var(--font-display);
     }
     .strip-day-btn .day-month {
-      font-size: 0.68rem;
+      font-size: 0.65rem;
       opacity: 0.7;
     }
 
@@ -723,34 +727,54 @@ import { WodParserService } from '../services/wod-parser.service';
     .wods-display-grid {
       display: grid;
       grid-template-columns: 1fr;
-      gap: 28px;
+      gap: 16px;
     }
     .wod-detail-card {
-      padding: 36px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: 12px;
+      border-left: 4px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .wod-detail-card.wod-amrap { border-left-color: var(--danger) !important; }
+    .wod-detail-card.wod-fortime, .wod-detail-card.wod-rft, .wod-detail-card.wod-chipper { border-left-color: var(--primary) !important; }
+    .wod-detail-card.wod-emom, .wod-detail-card.wod-eomom, .wod-detail-card.wod-tabata, .wod-detail-card.wod-hiit, .wod-detail-card.wod-deathby { border-left-color: var(--accent) !important; }
+    .wod-detail-card.wod-fuerza, .wod-detail-card.wod-complejo, .wod-detail-card.wod-halterofilia, .wod-detail-card.wod-gimnasia { border-left-color: var(--secondary) !important; }
+    .wod-detail-card.wod-other, .wod-detail-card.wod-calentamiento, .wod-detail-card.wod-ladder, .wod-detail-card.wod-metcon, .wod-detail-card.wod-partnerwod { border-left-color: var(--warning) !important; }
+
+    .part-indicator-badge {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0.2) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.15);
     }
     .wod-card-header {
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      padding-bottom: 20px;
-      margin-bottom: 4px;
+      padding-bottom: 10px;
+      margin-bottom: 0px;
     }
     .wod-title-wrapper {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 10px;
       flex-wrap: wrap;
     }
     .wod-title-wrapper h2 {
-      font-size: 1.8rem;
+      font-size: 1.4rem;
       color: #fff;
       font-weight: 800;
     }
     .badge-wod-type {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 800;
-      padding: 6px 14px;
+      padding: 4px 10px;
       border-radius: var(--radius-sm);
     }
 
@@ -763,49 +787,67 @@ import { WodParserService } from '../services/wod-parser.service';
 
     /* Timer Info Alert */
     .timer-info-alert {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 14px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: var(--radius-md);
-      padding: 14px 20px;
-      font-size: 0.92rem;
-      color: #d4d4d8;
-      margin-bottom: 8px;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.015);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      color: #a1a1aa;
+      width: fit-content;
+      margin-bottom: 0px;
     }
     .timer-icon {
-      font-size: 1.25rem;
+      font-size: 1.05rem;
       filter: drop-shadow(0 0 4px rgba(0, 255, 136, 0.3));
     }
     .timer-method {
       color: var(--primary);
       font-weight: 700;
-      margin-left: 6px;
+      margin-left: 4px;
     }
 
     /* Sections */
-    .wod-desc-section, .wod-exercises-section {
+    .wod-desc-section {
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      margin-bottom: 12px;
+      gap: 4px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.01);
+      border-left: 3px solid var(--primary);
+      padding: 8px 14px;
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
     }
-    .wod-desc-section h4, .wod-exercises-section h4 {
-      font-size: 0.95rem;
+    .wod-desc-section h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #a1a1aa;
+      margin-bottom: 2px;
+    }
+    .wod-exercises-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .wod-exercises-section h4 {
+      font-size: 0.85rem;
       text-transform: uppercase;
       letter-spacing: 0.06em;
       color: #71717a;
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-      padding-bottom: 10px;
-      margin-bottom: 8px;
+      padding-bottom: 6px;
+      margin-bottom: 4px;
     }
     .description-text {
-      color: #d4d4d8;
-      font-size: 0.92rem;
-      line-height: 1.65;
+      color: #fff;
+      font-size: 0.9rem;
+      line-height: 1.5;
       white-space: pre-line;
-      padding: 4px 0;
+      padding: 2px 0;
     }
 
     /* Exercises list table */
@@ -813,17 +855,37 @@ import { WodParserService } from '../services/wod-parser.service';
       display: flex;
       flex-direction: column;
       border: 1px solid var(--border-glow);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-sm);
       overflow: hidden;
       background: rgba(0, 0, 0, 0.25);
     }
     .exercise-item-row {
-      display: grid;
-      grid-template-columns: 50px 1.2fr 1.8fr;
+      display: flex;
       align-items: center;
-      padding: 18px 24px;
+      gap: 12px;
+      padding: 6px 16px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       transition: background-color 0.2s ease;
+      cursor: pointer;
+    }
+    .exercise-item-row.is-expanded .exercise-content-wrap {
+      flex-wrap: wrap !important;
+    }
+    .exercise-item-row.is-expanded .exercise-name {
+      white-space: normal !important;
+      max-width: 100% !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
+    }
+    .exercise-item-row.is-expanded .exercise-specs-inline {
+      flex-wrap: wrap !important;
+    }
+    .exercise-item-row.is-expanded .spec-details-text {
+      white-space: normal !important;
+      word-break: break-word !important;
+      max-width: 100% !important;
+      overflow: visible !important;
+      text-overflow: clip !important;
     }
     .exercise-item-row:hover {
       background-color: rgba(255, 255, 255, 0.015);
@@ -832,59 +894,82 @@ import { WodParserService } from '../services/wod-parser.service';
       border-bottom: none;
     }
     .exercise-order {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
       color: var(--primary);
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       font-weight: 800;
-      font-size: 1.1rem;
+      font-size: 0.8rem;
+      font-family: var(--font-display);
+      flex-shrink: 0;
     }
-    .exercise-main-info {
+    .exercise-content-wrap {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 12px;
     }
     .exercise-name {
       color: #fff;
       font-weight: 700;
-      font-size: 1.05rem;
+      font-size: 0.95rem;
       letter-spacing: -0.01em;
-    }
-    .exercise-category-badge {
-      font-size: 0.68rem;
-      padding: 2px 8px;
-      border-radius: 4px;
-      width: fit-content;
-      text-transform: uppercase;
-      font-weight: 700;
     }
     .badge-gim { background: rgba(6, 182, 212, 0.1); color: var(--accent); }
     .badge-halt { background: rgba(139, 92, 246, 0.1); color: var(--secondary); }
     .badge-mono { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
     .badge-estiramiento { background: rgba(16, 185, 129, 0.1); color: #10b981; }
     .badge-calentamiento { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-    .exercise-specs {
+ 
+    .exercise-specs-inline {
       display: flex;
-      flex-direction: row;
-      gap: 14px;
-      font-size: 0.92rem;
-      color: #e4e4e7;
-      flex-wrap: wrap;
-      justify-content: flex-end;
       align-items: center;
+      gap: 8px;
     }
-    .spec-series, .spec-reps {
-      background: rgba(255, 255, 255, 0.04);
-      padding: 6px 12px;
-      border-radius: var(--radius-sm);
+    .spec-formula-pill {
+      background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.82rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .spec-series-val {
+      color: #a1a1aa;
       font-weight: 600;
     }
-    .spec-details {
+    .spec-multiplier {
+      color: var(--primary);
+      font-weight: 800;
+    }
+    .spec-reps-val {
+      color: #fff;
+      font-weight: 700;
+    }
+    .spec-details-text {
+      font-size: 0.8rem;
       color: #a1a1aa;
       font-style: italic;
       background: rgba(255, 255, 255, 0.01);
-      padding: 6px 12px;
+      padding: 4px 10px;
       border-radius: var(--radius-sm);
       border: 1px dashed rgba(255, 255, 255, 0.05);
+    }
+    .form-grid-three {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 8px;
     }
 
     .no-exercises-alert, .no-exercises-alert-form {
@@ -1595,8 +1680,8 @@ import { WodParserService } from '../services/wod-parser.service';
 
     @media (max-width: 768px) {
       .date-scheduler {
-        padding: 16px !important;
-        gap: 16px !important;
+        padding: 10px !important;
+        gap: 8px !important;
         width: 100% !important;
         max-width: 100% !important;
         overflow: hidden !important;
@@ -1605,15 +1690,26 @@ import { WodParserService } from '../services/wod-parser.service';
       .date-controls {
         width: 100% !important;
         justify-content: space-between !important;
+        gap: 8px !important;
       }
-      .date-picker-input {
-        width: 150px !important;
-        height: 40px !important;
+      .date-picker-wrapper {
+        flex-grow: 1;
+        justify-content: center;
+      }
+      .calendar-icon {
+        left: 10px !important;
         font-size: 0.9rem !important;
       }
-      .nav-date-btn {
-        width: 36px !important;
+      .date-picker-input {
+        width: 100% !important;
+        max-width: 180px !important;
         height: 36px !important;
+        font-size: 0.85rem !important;
+        padding-left: 32px !important;
+      }
+      .nav-date-btn {
+        width: 32px !important;
+        height: 32px !important;
       }
 
       /* Tira semanal horizontal swipeable en móvil */
@@ -1621,73 +1717,125 @@ import { WodParserService } from '../services/wod-parser.service';
         display: flex !important;
         grid-template-columns: none !important;
         overflow-x: auto !important;
-        gap: 8px !important;
+        gap: 6px !important;
         width: 100% !important;
-        padding-bottom: 8px !important;
+        padding-bottom: 6px !important;
         scroll-snap-type: x mandatory !important;
         -webkit-overflow-scrolling: touch !important;
         justify-content: flex-start !important;
       }
       .strip-day-btn {
-        flex: 0 0 65px !important;
+        flex: 0 0 54px !important;
         scroll-snap-align: start !important;
-        padding: 10px 4px !important;
+        padding: 6px 2px !important;
       }
       .strip-day-btn .day-number {
-        font-size: 1.1rem !important;
+        font-size: 1rem !important;
       }
       .strip-day-btn .day-name {
-        font-size: 0.65rem !important;
+        font-size: 0.6rem !important;
       }
       
       /* Tarjeta de WOD */
+      .wods-display-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+      }
       .wod-detail-card {
-        padding: 16px !important;
-        gap: 16px !important;
+        padding: 12px !important;
+        gap: 10px !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
       }
       .wod-card-header {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 12px !important;
-        padding-bottom: 12px !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        padding-bottom: 8px !important;
+        flex-wrap: nowrap !important;
+        min-width: 0 !important;
+      }
+      .wod-title-wrapper {
+        flex: 1 1 0% !important;
+        min-width: 0 !important;
+        gap: 6px !important;
       }
       .wod-title-wrapper h2 {
-        font-size: 1.3rem !important;
+        font-size: 1.1rem !important;
+        word-break: break-word !important;
       }
       .wod-actions {
-        width: 100% !important;
+        width: auto !important;
         display: flex !important;
-        gap: 8px !important;
+        gap: 6px !important;
+        flex-shrink: 0 !important;
       }
       .wod-actions button {
-        flex: 1 !important;
+        flex: none !important;
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.75rem !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
       }
 
       /* Ejercicios del WOD */
       .exercise-item-row {
-        grid-template-columns: 30px 1fr !important;
+        display: flex !important;
+        align-items: center !important;
         gap: 8px !important;
-        padding: 12px !important;
+        padding: 6px 10px !important;
+        min-width: 0 !important;
       }
-      .exercise-specs {
-        grid-column: 2 !important;
-        justify-content: flex-start !important;
-        margin-top: 6px !important;
-        gap: 6px !important;
+      .exercise-content-wrap {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        flex-grow: 1 !important;
+        flex-wrap: nowrap !important;
+        overflow: hidden !important;
+        min-width: 0 !important;
       }
-      .spec-series, .spec-reps {
-        padding: 4px 8px !important;
-        font-size: 0.8rem !important;
+      .exercise-name {
+        font-size: 0.88rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 55% !important;
+        flex-shrink: 1 !important;
       }
-      .spec-details {
-        padding: 4px 8px !important;
-        font-size: 0.8rem !important;
-        width: 100% !important;
+      .exercise-specs-inline {
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        flex-shrink: 1 !important;
+        min-width: 0 !important;
+      }
+      .spec-formula-pill {
+        padding: 2px 6px !important;
+        font-size: 0.78rem !important;
+        flex-shrink: 0 !important;
+      }
+      .spec-details-text {
+        font-size: 0.75rem !important;
+        padding: 2px 6px !important;
+        max-width: 140px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        flex-shrink: 1 !important;
       }
 
       /* Formulario de WOD en modal */
       .wod-modal {
         padding: 20px 16px !important;
+      }
+      .form-grid-three {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
       }
       .item-fields-grid {
         grid-template-columns: 1fr !important;
@@ -1732,7 +1880,7 @@ export class WodsComponent implements OnInit {
   // WOD Modal State
   showModal = false;
   isEditMode = false;
-  wodForm: Omit<Wod, 'id' | 'wod_ejercicios'> & { id?: string } = this.getDefaultWodForm();
+  wodForm: Omit<Wod, 'id' | 'wod_ejercicios'> & { id?: string; orden?: number } = this.getDefaultWodForm();
   wodFormEjercicios: Array<Omit<WodEjercicio, 'id' | 'wod_id'> & { id?: string; wod_id?: string }> = [];
 
   // AI Creator Panel States
@@ -1761,6 +1909,19 @@ export class WodsComponent implements OnInit {
   aiProvider: 'local' | 'gemini' = 'local';
   geminiApiKey = '';
   geminiApiKeyImages = '';
+
+  expandedExercises: { [key: string]: boolean } = {};
+
+  toggleExerciseExpand(wodId: string | undefined, index: number) {
+    const key = (wodId || 'temp') + '_' + index;
+    this.expandedExercises[key] = !this.expandedExercises[key];
+    this.cdr.markForCheck();
+  }
+
+  isExerciseExpanded(wodId: string | undefined, index: number): boolean {
+    const key = (wodId || 'temp') + '_' + index;
+    return !!this.expandedExercises[key];
+  }
 
   ngOnInit() {
     this.selectedDate = this.getTodayDateStr();
@@ -1806,7 +1967,7 @@ export class WodsComponent implements OnInit {
       const date = new Date(startOfWeek);
       date.setDate(startOfWeek.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
-      
+
       this.weekDays.push({
         dateStr,
         dayName: weekdaysNames[i],
@@ -1839,7 +2000,12 @@ export class WodsComponent implements OnInit {
   loadWods() {
     this.db.getWods(this.selectedDate).subscribe({
       next: (data) => {
-        this.wods = data;
+        // Sort WODs by position (orden), placing undefined/null at the end
+        this.wods = data.sort((a, b) => {
+          const ordA = a.orden !== undefined && a.orden !== null ? a.orden : 999;
+          const ordB = b.orden !== undefined && b.orden !== null ? b.orden : 999;
+          return ordA - ordB;
+        });
         this.cdr.markForCheck();
       },
       error: (err) => {
@@ -1866,7 +2032,8 @@ export class WodsComponent implements OnInit {
       titulo: '',
       descripcion: '',
       tipo: 'AMRAP' as WodTipo,
-      fecha: this.selectedDate || this.getTodayDateStr()
+      fecha: this.selectedDate || this.getTodayDateStr(),
+      orden: 1
     };
   }
 
@@ -1883,6 +2050,7 @@ export class WodsComponent implements OnInit {
     this.isEditMode = false;
     this.wodForm = this.getDefaultWodForm();
     this.wodForm.fecha = this.selectedDate; // Program for the active view date
+    this.wodForm.orden = this.wods.length + 1; // Suggest the next position!
     this.wodFormEjercicios = [];
     this.exerciseSearchQuery = '';
     this.aiInputText = '';
@@ -1900,9 +2068,10 @@ export class WodsComponent implements OnInit {
       titulo: wod.titulo,
       descripcion: wod.descripcion || '',
       tipo: wod.tipo,
-      fecha: wod.fecha
+      fecha: wod.fecha,
+      orden: wod.orden || 1
     };
-    
+
     // Deep copy current exercises
     this.wodFormEjercicios = wod.wod_ejercicios ? wod.wod_ejercicios.map(we => ({
       id: we.id,
@@ -1930,7 +2099,8 @@ export class WodsComponent implements OnInit {
       titulo: this.wodForm.titulo.trim(),
       descripcion: this.wodForm.descripcion?.trim() || '',
       tipo: this.wodForm.tipo,
-      fecha: this.wodForm.fecha
+      fecha: this.wodForm.fecha,
+      orden: this.wodForm.orden || 1
     };
 
     // Prepare exercises list, making sure order matches the active array index
@@ -1989,7 +2159,7 @@ export class WodsComponent implements OnInit {
       this.filteredCatalogEjercicios = [];
       return;
     }
-    this.filteredCatalogEjercicios = this.catalogEjercicios.filter(ex => 
+    this.filteredCatalogEjercicios = this.catalogEjercicios.filter(ex =>
       ex.nombre.toLowerCase().includes(query) ||
       ex.categoria.toLowerCase().includes(query)
     );
@@ -2016,7 +2186,7 @@ export class WodsComponent implements OnInit {
   moveExercise(index: number, direction: number) {
     const targetIdx = index + direction;
     if (targetIdx < 0 || targetIdx >= this.wodFormEjercicios.length) return;
-    
+
     // Swap items
     const temp = this.wodFormEjercicios[index];
     this.wodFormEjercicios[index] = this.wodFormEjercicios[targetIdx];
@@ -2049,13 +2219,13 @@ export class WodsComponent implements OnInit {
         const resultString = e.target.result as string;
         const commaIndex = resultString.indexOf(',');
         const base64Data = resultString.substring(commaIndex + 1);
-        
+
         this.aiSelectedImage = {
           data: base64Data,
           mimeType: file.type,
           name: file.name
         };
-        
+
         if (this.aiProvider === 'local') {
           this.aiFeedbackMessage = 'Para procesar imágenes, se recomienda configurar Google Gemini en Ajustes.';
           this.aiFeedbackType = 'warning';
@@ -2176,8 +2346,8 @@ export class WodsComponent implements OnInit {
       return this.catalogEjercicios;
     }
     const q = query.toLowerCase().trim();
-    return this.catalogEjercicios.filter(ex => 
-      ex.nombre.toLowerCase().includes(q) || 
+    return this.catalogEjercicios.filter(ex =>
+      ex.nombre.toLowerCase().includes(q) ||
       ex.categoria.toLowerCase().includes(q)
     );
   }
@@ -2214,12 +2384,13 @@ export class WodsComponent implements OnInit {
 
     const targetFecha = this.wodForm.fecha || this.selectedDate || this.getTodayDateStr();
 
-    const saveRequests = this.parsedWodBlocks.map((bloque) => {
+    const saveRequests = this.parsedWodBlocks.map((bloque, index) => {
       const wodPayload = {
         titulo: bloque.titulo.trim(),
         descripcion: bloque.descripcion?.trim() || '',
         tipo: bloque.tipo,
-        fecha: targetFecha
+        fecha: targetFecha,
+        orden: index + 1
       };
 
       const ejerciciosPayload = bloque.ejercicios.map((we: any, index: number) => ({
@@ -2351,5 +2522,14 @@ export class WodsComponent implements OnInit {
       case 'Calentamiento': return 'badge-calentamiento';
       default: return 'badge-gim';
     }
+  }
+
+  getWodOrderLabel(orden?: number): string {
+    if (orden === undefined || orden === null || orden <= 0) return '';
+    const charCode = 65 + (orden - 1); // 65 is 'A'
+    if (charCode <= 90) {
+      return `PARTE ${String.fromCharCode(charCode)}`;
+    }
+    return `PARTE ${orden}`;
   }
 }
