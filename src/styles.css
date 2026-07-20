@@ -238,6 +238,66 @@ h1, h2, h3, h4, h5, h6 {
   border: 1px solid rgba(244, 63, 94, 0.2);
 }
 
+/* Category Badges */
+.badge-gimnasia, .badge-gim {
+  background: rgba(6, 182, 212, 0.1) !important;
+  color: var(--accent) !important;
+  border: 1px solid rgba(6, 182, 212, 0.2) !important;
+}
+.badge-halterofilia, .badge-halt {
+  background: rgba(139, 92, 246, 0.1) !important;
+  color: var(--secondary) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+.badge-monoestructural, .badge-mono {
+  background: rgba(245, 158, 11, 0.1) !important;
+  color: var(--warning) !important;
+  border: 1px solid rgba(245, 158, 11, 0.2) !important;
+}
+.badge-estiramiento {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+.badge-calentamiento {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  border: 1px solid rgba(239, 68, 68, 0.2) !important;
+}
+.badge-equipment {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #a1a1aa !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Info Icon Button Utility */
+.info-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 0.68rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  color: var(--primary);
+  cursor: pointer;
+  margin-left: 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  vertical-align: middle;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.info-icon-btn:hover {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.35);
+  transform: scale(1.15);
+  color: #fff;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;

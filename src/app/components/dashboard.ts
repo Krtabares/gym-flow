@@ -109,33 +109,70 @@ Chart.register(...registerables);
             </div>
           </div>
 
-          <div class="glass-card attendance-container">
-            <div class="flex-between">
-              <h3>Últimos Check-ins</h3>
-              <a routerLink="/attendance" class="btn btn-secondary btn-sm">Ver Todos</a>
-            </div>
-            
-            <div class="attendance-list" *ngIf="recentAttendance.length > 0; else noAttendance">
-              <div class="attendance-item animate-fade-in" *ngFor="let entry of recentAttendance">
-                <div class="avatar-col">
-                  <div class="avatar">{{ entry.miembro?.nombre?.charAt(0) || 'M' }}</div>
-                </div>
-                <div class="info-col">
-                  <span class="name">{{ entry.miembro?.nombre }}</span>
-                  <span class="plan">{{ entry.miembro?.plan?.nombre || 'Sin Plan' }}</span>
-                </div>
-                <div class="time-col">
-                  <span class="time">{{ formatTime(entry.fecha_hora) }}</span>
-                  <span class="date">{{ formatDate(entry.fecha_hora) }}</span>
+          <div class="flex-col gap-20">
+            <div class="glass-card attendance-container">
+              <div class="flex-between">
+                <h3>Últimos Check-ins</h3>
+                <a routerLink="/attendance" class="btn btn-secondary btn-sm">Ver Todos</a>
+              </div>
+              
+              <div class="attendance-list" *ngIf="recentAttendance.length > 0; else noAttendance">
+                <div class="attendance-item animate-fade-in" *ngFor="let entry of recentAttendance">
+                  <div class="avatar-col">
+                    <div class="avatar">{{ entry.miembro?.nombre?.charAt(0) || 'M' }}</div>
+                  </div>
+                  <div class="info-col">
+                    <span class="name">{{ entry.miembro?.nombre }}</span>
+                    <span class="plan">{{ entry.miembro?.plan?.nombre || 'Sin Plan' }}</span>
+                  </div>
+                  <div class="time-col">
+                    <span class="time">{{ formatTime(entry.fecha_hora) }}</span>
+                    <span class="date">{{ formatDate(entry.fecha_hora) }}</span>
+                  </div>
                 </div>
               </div>
+              <ng-template #noAttendance>
+                <div class="empty-state">
+                  <span class="empty-icon">📭</span>
+                  <p>No se han registrado check-ins hoy.</p>
+                </div>
+              </ng-template>
             </div>
-            <ng-template #noAttendance>
-              <div class="empty-state">
-                <span class="empty-icon">📭</span>
-                <p>No se han registrado check-ins hoy.</p>
+
+            <!-- Próximos Cumpleaños -->
+            <div class="glass-card birthdays-container">
+              <div class="flex-between" style="margin-bottom: 16px;">
+                <h3 style="margin-bottom: 0;">🎉 Próximos Cumpleaños</h3>
               </div>
-            </ng-template>
+              
+              <div class="birthdays-list" *ngIf="upcomingBirthdays.length > 0; else noBirthdays">
+                <div class="birthday-item animate-fade-in" *ngFor="let bday of upcomingBirthdays">
+                  <div class="avatar-col">
+                    <div class="avatar birthday-avatar">{{ bday.miembro.nombre.charAt(0) || 'M' }}</div>
+                  </div>
+                  <div class="info-col">
+                    <span class="name">{{ bday.miembro.nombre }}</span>
+                    <span class="bday-desc">Cumple {{ bday.nextAge }} años</span>
+                  </div>
+                  <div class="bday-date-col">
+                    <span class="bday-date">{{ bday.formattedDate }}</span>
+                    <span class="badge" 
+                      [class.badge-today]="bday.daysRemaining === 0"
+                      [class.badge-tomorrow]="bday.daysRemaining === 1"
+                      [class.badge-upcoming]="bday.daysRemaining > 1"
+                    >
+                      {{ bday.daysRemaining === 0 ? 'Hoy 🎉' : bday.daysRemaining === 1 ? 'Mañana 🎂' : 'En ' + bday.daysRemaining + ' días' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <ng-template #noBirthdays>
+                <div class="empty-state" style="height: 120px;">
+                  <span class="empty-icon" style="font-size: 1.8rem;">🎂</span>
+                  <p style="font-size: 0.85rem;">No hay cumpleaños registrados próximamente.</p>
+                </div>
+              </ng-template>
+            </div>
           </div>
         </div>
       </div>
@@ -532,6 +569,68 @@ Chart.register(...registerables);
       font-size: 2.5rem;
     }
 
+    /* Birthdays List */
+    .birthdays-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .birthday-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      transition: all 0.2s ease;
+    }
+    .birthday-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .birthday-avatar {
+      background: linear-gradient(135deg, #f59e0b 0%, #f43f5e 100%);
+    }
+    .bday-desc {
+      font-size: 0.75rem;
+      color: #a1a1aa;
+    }
+    .bday-date-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+    }
+    .bday-date {
+      font-weight: 600;
+      font-size: 0.8rem;
+      color: #fff;
+    }
+    .badge-today {
+      background: rgba(244, 63, 94, 0.1);
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.25);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+    }
+    .badge-tomorrow {
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+    }
+    .badge-upcoming {
+      background: rgba(6, 182, 212, 0.1);
+      color: #06b6d4;
+      border: 1px solid rgba(6, 182, 212, 0.25);
+      font-size: 0.65rem;
+      padding: 1px 6px;
+    }
+
     /* PR Feed */
     .pr-feed-header {
       padding-bottom: 12px;
@@ -760,6 +859,13 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   miembros: Miembro[] = [];
   tasaCambio = 1.0;
 
+  upcomingBirthdays: Array<{
+    miembro: Miembro;
+    daysRemaining: number;
+    nextAge: number;
+    formattedDate: string;
+  }> = [];
+
   // Exercise Statistics data
   ejercicios: Ejercicio[] = [];
   wods: Wod[] = [];
@@ -805,6 +911,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       this.db.getMiembros().subscribe(miembros => {
         this.miembros = miembros;
         this.calculateMetrics();
+        this.calculateUpcomingBirthdays();
         this.updateChart();
         this.cdr.markForCheck();
       });
@@ -861,6 +968,51 @@ export class DashboardComponent implements OnInit, AfterViewInit {
       }
       return sum;
     }, 0);
+  }
+
+  calculateUpcomingBirthdays() {
+    if (!this.miembros || this.miembros.length === 0) {
+      this.upcomingBirthdays = [];
+      return;
+    }
+
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    this.upcomingBirthdays = this.miembros
+      .filter(m => m.fecha_nacimiento && m.estado !== 'inactivo')
+      .map(m => {
+        const parts = m.fecha_nacimiento!.split('-');
+        const birthYear = parseInt(parts[0], 10);
+        const birthMonth = parseInt(parts[1], 10) - 1;
+        const birthDay = parseInt(parts[2], 10);
+
+        let nextBirthday = new Date(today.getFullYear(), birthMonth, birthDay);
+        let nextAge = today.getFullYear() - birthYear;
+
+        if (nextBirthday < todayMidnight) {
+          nextBirthday = new Date(today.getFullYear() + 1, birthMonth, birthDay);
+          nextAge++;
+        }
+
+        const diffTime = nextBirthday.getTime() - todayMidnight.getTime();
+        const daysRemaining = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+        const meses = [
+          'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+          'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+        ];
+        const formattedDate = `${birthDay} de ${meses[birthMonth]}`;
+
+        return {
+          miembro: m,
+          daysRemaining,
+          nextAge,
+          formattedDate
+        };
+      })
+      .sort((a, b) => a.daysRemaining - b.daysRemaining)
+      .slice(0, 5);
   }
 
   calculateRecentPRs() {

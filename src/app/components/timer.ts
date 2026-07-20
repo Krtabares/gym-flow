@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SupabaseService } from '../services/supabase.service';
-import { Wod, WodEjercicio, TimerMetodo, WodTipo, WOD_TIMER_MAP } from '../models';
+import { Wod, WodEjercicio, TimerMetodo, WodTipo, WOD_TIMER_MAP, Ejercicio } from '../models';
 import { Subscription } from 'rxjs';
 
 type TimerState = 'setup' | 'prep' | 'work' | 'rest' | 'cycle_rest' | 'finished';
@@ -310,7 +310,17 @@ interface LapTime {
                 <div class="exercise-mini-row" *ngFor="let we of selectedWod.wod_ejercicios; let idx = index">
                   <span class="ex-idx">{{ idx + 1 }}</span>
                   <div class="ex-info">
-                    <span class="ex-name">{{ we.ejercicio?.nombre || 'Ejercicio' }}</span>
+                    <span class="ex-name">
+                      {{ we.ejercicio?.nombre || 'Ejercicio' }}
+                      <span 
+                        *ngIf="we.ejercicio"
+                        class="info-icon-btn" 
+                        (click)="openExerciseDetailsModal(we.ejercicio, $event)"
+                        title="Ver información del ejercicio"
+                      >
+                        ℹ️
+                      </span>
+                    </span>
                     <span class="ex-specs">
                       <strong *ngIf="we.series">{{ we.series }}s </strong>
                       <span *ngIf="we.repeticiones">{{ we.repeticiones }} </span>
@@ -324,6 +334,49 @@ interface LapTime {
         </div>
 
       </div>
+
+      <!-- EXERCISE DETAILS MODAL -->
+      <div class="modal-backdrop" *ngIf="showExerciseDetailsModal" (click)="closeExerciseDetailsModal()">
+        <div class="glass-card modal-content quick-exercise-modal animate-fade-in" (click)="$event.stopPropagation()">
+          <div class="flex-between modal-header">
+            <h3>Detalles del Ejercicio</h3>
+            <button class="close-btn" (click)="closeExerciseDetailsModal()">✕</button>
+          </div>
+
+          <div class="exercise-details-modal-body" style="padding-top: 15px; text-align: left;" *ngIf="selectedExerciseForModal">
+            <h2 style="font-size: 1.5rem; color: #fff; margin-bottom: 12px; font-family: var(--font-display);">{{ selectedExerciseForModal.nombre }}</h2>
+            
+            <div class="flex-gap-2 mb-16" style="flex-wrap: wrap; margin-bottom: 16px; display: flex; gap: 8px; align-items: center;">
+              <span class="badge" [ngClass]="getCategoryBadgeClass(selectedExerciseForModal.categoria)">
+                {{ selectedExerciseForModal.categoria }}
+              </span>
+              <span class="badge badge-equipment" *ngIf="selectedExerciseForModal.equipamiento">
+                🛠️ {{ selectedExerciseForModal.equipamiento }}
+              </span>
+            </div>
+
+            <div class="form-group" *ngIf="selectedExerciseForModal.descripcion">
+              <label class="form-label" style="margin-bottom: 6px;">Instrucciones y Técnica</label>
+              <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-glow); padding: 14px; border-radius: var(--radius-md); font-size: 0.9rem; line-height: 1.6; color: #e4e4e7; white-space: pre-line;">
+                {{ selectedExerciseForModal.descripcion }}
+              </div>
+            </div>
+
+            <div class="form-group" *ngIf="selectedExerciseForModal.url_video">
+              <label class="form-label" style="margin-bottom: 6px;">Video Tutorial / Demostración</label>
+              <a [href]="selectedExerciseForModal.url_video" target="_blank" class="btn btn-secondary" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; background: rgba(139, 92, 246, 0.1); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.25); transition: all 0.2s;">
+                🎥 Ver Video de Demostración
+              </a>
+            </div>
+          </div>
+
+          <div class="flex-between form-actions" style="margin-top: 20px;">
+            <div></div>
+            <button type="button" class="btn btn-primary" (click)="closeExerciseDetailsModal()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -919,6 +972,8 @@ export class TimerComponent implements OnInit, OnDestroy {
   state: TimerState = 'setup';
   selectedMode: TimerMode = 'fortime';
   isPaused = true;
+  showExerciseDetailsModal = false;
+  selectedExerciseForModal: Ejercicio | null = null;
 
   // Configurations Model
   config = {
@@ -968,6 +1023,31 @@ export class TimerComponent implements OnInit, OnDestroy {
 
   // Web Audio Context for Beeps
   private audioCtx: AudioContext | null = null;
+
+  openExerciseDetailsModal(ejercicio: Ejercicio, event: Event) {
+    event.stopPropagation();
+    this.selectedExerciseForModal = ejercicio;
+    this.showExerciseDetailsModal = true;
+    this.cdr.markForCheck();
+  }
+
+  closeExerciseDetailsModal() {
+    this.showExerciseDetailsModal = false;
+    this.selectedExerciseForModal = null;
+    this.cdr.markForCheck();
+  }
+
+  getCategoryBadgeClass(category?: string): string {
+    if (!category) return 'badge-gim';
+    switch (category) {
+      case 'Gimnasia': return 'badge-gim';
+      case 'Halterofilia': return 'badge-halt';
+      case 'Monoestructural': return 'badge-mono';
+      case 'Estiramiento': return 'badge-estiramiento';
+      case 'Calentamiento': return 'badge-calentamiento';
+      default: return 'badge-gim';
+    }
+  }
 
   ngOnInit(): void {
     // Default date to today
