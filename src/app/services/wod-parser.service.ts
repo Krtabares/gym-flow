@@ -234,9 +234,33 @@ export class WodParserService {
   /**
    * PARSER POR API DE GEMINI: Envía el texto a Gemini API solicitando dividir el entrenamiento
    * en uno o más bloques independientes en formato JSON.
+   * Cuenta con un sistema de fallback secuencial para probar diferentes modelos en caso de error.
    */
   parseWithGemini(text: string, apiKey: string, catalog: Ejercicio[], image?: { data: string; mimeType: string }): Observable<{ bloques: ParsedWodResult[] }> {
-    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';
+    const models = [
+      'gemini-3.6-flash',
+      'gemini-3.5-flash',
+      'gemini-2.0-flash-lite',
+      'gemini-flash-latest'
+    ];
+    return this.tryModelsSequentially(models, 0, text, apiKey, catalog, image);
+  }
+
+  private tryModelsSequentially(
+    models: string[],
+    index: number,
+    text: string,
+    apiKey: string,
+    catalog: Ejercicio[],
+    image?: { data: string; mimeType: string }
+  ): Observable<{ bloques: ParsedWodResult[] }> {
+    if (index >= models.length) {
+      console.warn("Todos los modelos de Gemini fallaron o no están disponibles. Usando parser local.");
+      return of(this.parseWodText(text, catalog));
+    }
+
+    const modelName = models[index];
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
     const headers = {
       'Content-Type': 'application/json',
       'x-goog-api-key': apiKey
@@ -325,8 +349,8 @@ Para cada ejercicio, extrae:
           const candidate = res.candidates?.[0];
           const rawText = candidate?.content?.parts?.[0]?.text;
           if (!rawText) {
-            console.warn("No text content returned from Gemini API");
-            return this.parseWodText(text, catalog);
+            console.warn(`No text content returned from Gemini API for model ${modelName}`);
+            throw new Error("No text content returned from Gemini API");
           }
           const parsed = JSON.parse(rawText);
           const bloques: ParsedWodResult[] = [];
@@ -391,13 +415,13 @@ Para cada ejercicio, extrae:
 
           return { bloques };
         } catch (e) {
-          console.error("Error parsing Gemini JSON response", e);
-          return this.parseWodText(text, catalog);
+          console.error(`Error parsing Gemini JSON response for model ${modelName}`, e);
+          throw e; // Propagate error to trigger fallback in catchError
         }
       }),
       catchError(err => {
-        console.error("Gemini API request failed, falling back to local parser", err);
-        return of(this.parseWodText(text, catalog));
+        console.warn(`Gemini API request failed for model ${modelName}, trying next fallback model...`, err);
+        return this.tryModelsSequentially(models, index + 1, text, apiKey, catalog, image);
       })
     );
   }
